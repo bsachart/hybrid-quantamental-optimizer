@@ -212,27 +212,32 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
         st.header("2. Fundamental Analysis")
         
         # Create editable DataFrame with fundamental inputs + calculated Implied CAGR
+        # Column order: Current state → Inputs → Calculated output
         edit_df = funds_aligned[["Current Price", "Sales/Share", "Current Margin", "Target Margin", "Adjusted Growth Rate", "Exit PE"]].copy()
-        edit_df["Implied CAGR"] = expected_returns
         
-        # Calculate Current PE if possible
+        # Calculate Current PE if possible (insert after Current Margin since it's derived from Price/Sales/Margin)
         try:
             current_eps = funds_aligned["Sales/Share"] * funds_aligned["Current Margin"]
             current_pe = P0.values / current_eps.replace(0, np.nan)
-            edit_df["Current PE"] = current_pe
+            # Insert Current PE after Current Margin (position 3)
+            edit_df.insert(3, "Current PE", current_pe)
         except Exception:
             pass
         
-        # Column configuration for proper formatting and to disable Implied CAGR editing
+        # Add Implied CAGR as last column (calculated output)
+        edit_df["Implied CAGR"] = expected_returns
+        
+        # Column configuration for proper formatting and to disable calculated columns
+        # 🔒 indicates calculated/read-only columns
         column_config = {
             "Current Price": st.column_config.NumberColumn("Current Price", format="$%.2f", help="Current stock price"),
+            "Current PE": st.column_config.NumberColumn("🔒 Current PE", format="%.1f", disabled=True, help="Calculated: Price / EPS (not editable)"),
             "Sales/Share": st.column_config.NumberColumn("Sales/Share", format="$%.2f", help="Sales per share (TTM)"),
             "Current Margin": st.column_config.NumberColumn("Current Margin", format="%.4f", min_value=-1.0, max_value=1.0, help="Current net profit margin (decimal)"),
             "Target Margin": st.column_config.NumberColumn("Target Margin", format="%.4f", min_value=-1.0, max_value=1.0, help="Expected margin at exit (decimal)"),
             "Adjusted Growth Rate": st.column_config.NumberColumn("Growth Rate", format="%.4f", min_value=-1.0, max_value=2.0, help="Annual sales growth rate (decimal)"),
             "Exit PE": st.column_config.NumberColumn("Exit PE", format="%.1f", min_value=0, help="Expected P/E ratio at exit"),
-            "Implied CAGR": st.column_config.NumberColumn("Implied CAGR", format="%.4f", disabled=True, help="Calculated implied return (not editable)"),
-            "Current PE": st.column_config.NumberColumn("Current PE", format="%.1f", disabled=True, help="Current P/E ratio (calculated)"),
+            "Implied CAGR": st.column_config.NumberColumn("🔒 Implied CAGR", format="%.4f", disabled=True, help="Calculated implied return (not editable)"),
         }
         
         # Compact header with sort control
@@ -260,7 +265,7 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
         edited_df = st.data_editor(
             edit_df,
             column_config=column_config,
-            use_container_width=True,
+            width="stretch",
             key="fundamentals_editor"
         )
         
@@ -323,7 +328,7 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
                 ]
             ).properties(height=300).interactive()
             
-            st.altair_chart(margin_chart, use_container_width=True)
+            st.altair_chart(margin_chart, width="stretch")
 
         # 5. Optimize
         if st.button("Run Optimization"):
@@ -361,31 +366,12 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
                 # Filter out small weights
                 weights_df = weights_df[weights_df["Weight"] > 0.001]
 
-                # Portfolio Allocation: Single comprehensive table (Ousterhout: reduce complexity, single source of truth)
+                # Portfolio Allocation: Simplified table (fundamentals already visible in edit table above)
                 st.subheader("Portfolio Allocation")
+                st.caption("Fundamentals are shown in the Edit Assumptions table above.")
                 
-                # Merge with fundamental data
-                # We can use display_df (transposed) or funds_aligned
-                # Let's use funds_aligned for raw values and format them
-                
-                comp_df = weights_df.set_index("Ticker").copy()
-                
-                # Add fundamental columns
-                fund_cols = ["Current Margin", "Target Margin", "Exit PE"]
-                for col in fund_cols:
-                    if col in funds_aligned.columns:
-                        comp_df[col] = funds_aligned.loc[comp_df.index, col]
-                
-                # Add Current PE if we calculated it
-                if "Current PE" in display_df.columns:
-                     comp_df["Current PE"] = display_df.loc[comp_df.index, "Current PE"]
-
-                # Rename columns for clarity
-                rename_map = {
-                    "Target Margin": f"Target Margin (Yr {investment_horizon})",
-                    "Exit PE": f"Exit PE (Yr {investment_horizon})"
-                }
-                comp_df = comp_df.rename(columns=rename_map)
+                # Only show portfolio-specific columns: Weight, Return, Risk
+                comp_df = weights_df.set_index("Ticker")[["Weight", "Implied Return", "Volatility"]]
                 
                 # Format and display
                 st.dataframe(
@@ -393,11 +379,8 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
                         "Weight": "{:.2%}",
                         "Implied Return": "{:.2%}",
                         "Volatility": "{:.2%}",
-                        "Current Margin": "{:.2%}",
-                        f"Target Margin (Yr {investment_horizon})": "{:.2%}",
-                        "Current PE": "{:.1f}",
-                        f"Exit PE (Yr {investment_horizon})": "{:.1f}"
-                    }).background_gradient(cmap="Blues", subset=["Weight"]),
+                    }).background_gradient(cmap="Blues", subset=["Weight"])
+                    .background_gradient(cmap="RdYlGn", subset=["Implied Return"], vmin=-0.1, vmax=0.3),
                     width="stretch"
                 )
 

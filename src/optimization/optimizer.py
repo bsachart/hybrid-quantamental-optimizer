@@ -139,68 +139,6 @@ def portfolio_volatility(
     return np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
 
 
-def _sample_dirichlet(
-    n: int,
-    alpha: float,
-    num_assets: int,
-    expected_returns: npt.NDArray[np.float64],
-    cov_matrix: npt.NDArray[np.float64],
-) -> List[Dict[str, float]]:
-    results = []
-    for _ in range(n):
-        weights = np.random.dirichlet(np.ones(num_assets) * alpha)
-        ret = np.sum(weights * expected_returns)
-        vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
-        results.append({"return": ret, "volatility": vol, "weights": weights})
-    return results
-
-def _sample_subsets(
-    n: int,
-    num_assets: int,
-    expected_returns: npt.NDArray[np.float64],
-    cov_matrix: npt.NDArray[np.float64],
-) -> List[Dict[str, float]]:
-    results = []
-    for _ in range(n):
-        # Pick a random subset size k from 2 to num_assets
-        k = np.random.randint(2, num_assets + 1)
-        indices = np.random.choice(num_assets, k, replace=False)
-        
-        # Dirichlet on the subset
-        sub_weights = np.random.dirichlet(np.ones(k))
-        
-        weights = np.zeros(num_assets)
-        weights[indices] = sub_weights
-        
-        ret = np.sum(weights * expected_returns)
-        vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
-        results.append({"return": ret, "volatility": vol, "weights": weights})
-    return results
-
-def _sample_near_frontier(
-    n: int,
-    frontier_points: List[Dict[str, float]],
-    num_assets: int,
-    expected_returns: npt.NDArray[np.float64],
-    cov_matrix: npt.NDArray[np.float64],
-) -> List[Dict[str, float]]:
-    results = []
-    for _ in range(n):
-        pt = np.random.choice(frontier_points)
-        w_opt = pt['weights']
-        
-        # Perturb
-        eps = np.random.uniform(0.01, 0.15)
-        w_noise = np.random.dirichlet(np.ones(num_assets) * 0.5)
-        
-        w_new = (1 - eps) * w_opt + eps * w_noise
-        w_new /= np.sum(w_new)
-        
-        ret = np.sum(w_new * expected_returns)
-        vol = np.sqrt(np.dot(w_new.T, np.dot(cov_matrix, w_new)))
-        results.append({"return": ret, "volatility": vol, "weights": w_new})
-    return results
-
 def generate_random_portfolios(
     num_portfolios: int,
     expected_returns: npt.NDArray[np.float64],
@@ -209,45 +147,34 @@ def generate_random_portfolios(
 ) -> List[Dict[str, float]]:
     """
     Generates random portfolios to visualize the feasible set.
-    Uses a mixture of strategies to ensure uniform coverage.
+    
+    Simple approach: Dirichlet sampling with varied concentration parameters
+    to get a mix of concentrated and diversified portfolios.
     """
     results = []
     num_assets = len(expected_returns)
     
-    # Allocation Strategy
-    # 1. Dirichlet Sweep (0.01, 0.1, 0.5, 1.0) - 40%
-    # 2. Random Subsets (k=2..N) - 30%
-    # 3. Near-Frontier - 30% (if available)
-
-    has_frontier = frontier_points is not None and len(frontier_points) > 0
+    # Simple Dirichlet sampling with varying concentration
+    # Low alpha = concentrated portfolios (sparse, near vertices)
+    # High alpha = diversified portfolios (near center)
+    alphas = [0.1, 0.3, 0.5, 1.0, 2.0]
+    n_per_alpha = num_portfolios // len(alphas)
     
-    if has_frontier:
-        n_sweep = int(num_portfolios * 0.4)
-        n_subsets = int(num_portfolios * 0.3)
-        n_frontier = num_portfolios - n_sweep - n_subsets
-    else:
-        n_sweep = int(num_portfolios * 0.6)
-        n_subsets = num_portfolios - n_sweep
-        n_frontier = 0
-
-    # 1. Dirichlet Sweep
-    alphas = [0.01, 0.1, 0.5, 1.0]
-    n_per_alpha = n_sweep // len(alphas)
     for alpha in alphas:
-        results.extend(_sample_dirichlet(n_per_alpha, alpha, num_assets, expected_returns, cov_matrix))
+        for _ in range(n_per_alpha):
+            weights = np.random.dirichlet(np.ones(num_assets) * alpha)
+            ret = np.sum(weights * expected_returns)
+            vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+            results.append({"return": ret, "volatility": vol, "weights": weights})
     
-    # Fill remainder of sweep if any
-    rem_sweep = n_sweep - (n_per_alpha * len(alphas))
-    if rem_sweep > 0:
-        results.extend(_sample_dirichlet(rem_sweep, 1.0, num_assets, expected_returns, cov_matrix))
-
-    # 2. Random Subsets
-    results.extend(_sample_subsets(n_subsets, num_assets, expected_returns, cov_matrix))
-
-    # 3. Near-Frontier
-    if has_frontier:
-        results.extend(_sample_near_frontier(n_frontier, frontier_points, num_assets, expected_returns, cov_matrix))
-
+    # Fill any remainder
+    remainder = num_portfolios - len(results)
+    for _ in range(remainder):
+        weights = np.random.dirichlet(np.ones(num_assets))
+        ret = np.sum(weights * expected_returns)
+        vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+        results.append({"return": ret, "volatility": vol, "weights": weights})
+    
     return results
 
 
