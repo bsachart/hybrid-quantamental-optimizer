@@ -110,7 +110,7 @@ if df is not None:
     
     edited_df = st.data_editor(
         df,
-        use_container_width=True,
+        width="stretch",
         column_config=COLUMN_CONFIG,
         num_rows="dynamic",
         key="forecast_editor"

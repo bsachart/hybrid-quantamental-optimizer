@@ -181,7 +181,7 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
                     .add_params(selection)
                     .interactive()
                 )
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width="stretch")
 
             with col_hist2:
                 st.subheader("Correlations")
@@ -189,7 +189,7 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
                     corr_matrix.style.background_gradient(
                         cmap="coolwarm", vmin=-1, vmax=1
                     ).format("{:.2f}"),
-                    use_container_width=True,
+                    width="stretch",
                 )
 
         # 4. Calculate Returns (Implied CAGR)
@@ -244,7 +244,7 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
             display_df.T.style.format("{:.2%}", subset=pd.IndexSlice[pct_cols, :])
             .format("{:.1f}", subset=pd.IndexSlice[pe_cols, :], na_rep="-")
             .background_gradient(cmap="RdYlGn", subset=pd.IndexSlice["Implied CAGR", :], vmin=-0.1, vmax=0.3),
-            use_container_width=True
+            width="stretch"
         )
 
         # 5. Optimize
@@ -320,7 +320,7 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
                         "Current PE": "{:.1f}",
                         f"Exit PE (Yr {investment_horizon})": "{:.1f}"
                     }).background_gradient(cmap="Blues", subset=["Weight"]),
-                    use_container_width=True
+                    width="stretch"
                 )
 
                 # --- Efficient Frontier Plot ---
@@ -348,7 +348,7 @@ if st.session_state['prices'] is not None and st.session_state['fundamentals'] i
                     asset_vols=asset_vols
                 )
                 
-                st.altair_chart(combined_chart, use_container_width=True)
+                st.altair_chart(combined_chart, width="stretch")
 
             else:
                 st.error(f"Optimization failed: {result['message']}")
