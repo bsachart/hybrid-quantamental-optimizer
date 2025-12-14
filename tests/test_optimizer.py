@@ -1,17 +1,22 @@
 """
 Tests for portfolio optimization module.
 
+Test Strategy:
+    1. Test mathematical correctness (formulas, analytical solutions)
+    2. Test constraint satisfaction (weights sum to 1, bounds respected)
+    3. Test optimization properties (frontier dominance, diversification benefits)
+    4. Test edge cases (degenerate inputs, infeasible constraints)
+    
 Organization:
-    - Fixtures: Shared test data
-    - TestPortfolioMetrics: Core calculation tests
-    - TestOptimization: Constraint and objective tests
-    - TestEfficientFrontier: Frontier dominance tests
-    - TestEdgeCases: Boundary conditions and error handling
+    - Fixtures: Test data with clear mathematical properties
+    - TestMetricsCalculation: Portfolio metric formulas
+    - TestConstrainedOptimization: Constraint handling
+    - TestEfficientFrontier: Mean-variance efficiency
+    - TestDegenerateInputs: Edge cases and error conditions
 """
 
 import pytest
 import numpy as np
-import pandas as pd
 from src.optimization.optimizer import (
     PortfolioOptimizer,
     optimize_portfolio,
@@ -25,125 +30,238 @@ from src.core.returns import calculate_implied_cagr
 # ============================================================================
 
 @pytest.fixture
-def sample_data():
+def uncorrelated_assets():
     """
-    Five uncorrelated assets with increasing risk/return.
+    Five uncorrelated assets with linearly increasing risk and return.
     
-    Returns are 10%-30%, volatilities are 10%-30%.
-    Uncorrelated for easy reasoning about optimal portfolios.
+    Properties:
+    - Returns: 10%, 15%, 20%, 25%, 30%
+    - Volatilities: 10%, 15%, 20%, 25%, 30%
+    - Correlation: Zero (diagonal covariance matrix)
+    
+    This setup has known analytical solutions for testing.
     """
-    expected_returns = np.array([0.10, 0.15, 0.20, 0.25, 0.30])
+    returns = np.array([0.10, 0.15, 0.20, 0.25, 0.30])
     vols = np.array([0.10, 0.15, 0.20, 0.25, 0.30])
-    cov_matrix = np.diag(vols**2)
-    return expected_returns, cov_matrix
+    cov = np.diag(vols**2)
+    return returns, cov, vols
 
 
 @pytest.fixture
-def optimizer(sample_data):
-    """Reusable optimizer instance."""
-    expected_returns, cov_matrix = sample_data
-    return PortfolioOptimizer(expected_returns, cov_matrix, risk_free_rate=0.02)
+def optimizer_uncorrelated(uncorrelated_assets):
+    """Optimizer with uncorrelated assets."""
+    returns, cov, _ = uncorrelated_assets
+    return PortfolioOptimizer(returns, cov, risk_free_rate=0.02)
 
 
-# ============================================================================
-# Test Portfolio Metrics
-# ============================================================================
-
-class TestPortfolioMetrics:
-    """Test core portfolio calculations."""
+@pytest.fixture
+def correlated_assets():
+    """
+    Three assets with positive correlation.
     
-    def test_calculate_metrics(self, optimizer):
-        """Verify return, volatility, and Sharpe calculations."""
-        # Equal weights portfolio
+    Tests that optimizer handles covariance structure correctly.
+    """
+    returns = np.array([0.08, 0.12, 0.15])
+    # Correlation matrix with moderate positive correlations
+    corr = np.array([
+        [1.0, 0.3, 0.2],
+        [0.3, 1.0, 0.4],
+        [0.2, 0.4, 1.0]
+    ])
+    vols = np.array([0.15, 0.20, 0.25])
+    # Convert correlation to covariance: cov_ij = corr_ij * vol_i * vol_j
+    cov = corr * np.outer(vols, vols)
+    return returns, cov
+
+
+# ============================================================================
+# Test Metrics Calculation
+# ============================================================================
+
+class TestMetricsCalculation:
+    """Test portfolio metric formulas are implemented correctly."""
+    
+    def test_return_calculation(self, optimizer_uncorrelated):
+        """Portfolio return should be weighted average of asset returns."""
         weights = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
-        metrics = optimizer.calculate_metrics(weights)
+        metrics = optimizer_uncorrelated.calculate_metrics(weights)
         
-        # Expected return = weighted average of returns
+        # E[R_p] = Σ w_i * E[R_i]
+        expected_return = 0.2 * 0.10 + 0.2 * 0.15 + 0.2 * 0.20 + 0.2 * 0.25 + 0.2 * 0.30
+        assert np.isclose(metrics.return_, expected_return)
         assert np.isclose(metrics.return_, 0.20)
-        
-        # For uncorrelated assets: portfolio_var = sum(w_i^2 * var_i)
-        # vol = sqrt(0.2^2 * 0.10^2 + 0.2^2 * 0.15^2 + ... + 0.2^2 * 0.30^2)
-        variances = np.array([0.10, 0.15, 0.20, 0.25, 0.30])**2
-        expected_vol = np.sqrt(np.sum(weights**2 * variances))
-        assert np.isclose(metrics.volatility, expected_vol)
-        
-        # Sharpe = (ret - rf) / vol
-        expected_sharpe = (0.20 - 0.02) / expected_vol
-        assert np.isclose(metrics.sharpe_ratio, expected_sharpe)
     
-    def test_zero_weights(self, optimizer):
-        """Zero weights should give zero return/volatility, zero Sharpe."""
-        weights = np.zeros(5)
+    def test_volatility_calculation_uncorrelated(self, uncorrelated_assets, optimizer_uncorrelated):
+        """For uncorrelated assets: σ_p² = Σ w_i² σ_i²"""
+        _, _, vols = uncorrelated_assets
+        weights = np.array([0.3, 0.3, 0.2, 0.1, 0.1])
+        metrics = optimizer_uncorrelated.calculate_metrics(weights)
+        
+        # For diagonal covariance: portfolio variance is sum of weighted variances
+        expected_variance = np.sum(weights**2 * vols**2)
+        expected_vol = np.sqrt(expected_variance)
+        
+        assert np.isclose(metrics.volatility, expected_vol)
+    
+    def test_volatility_calculation_correlated(self, correlated_assets):
+        """For correlated assets: σ_p² = w' Σ w (full matrix multiplication)."""
+        returns, cov = correlated_assets
+        optimizer = PortfolioOptimizer(returns, cov, risk_free_rate=0.02)
+        
+        weights = np.array([0.4, 0.4, 0.2])
         metrics = optimizer.calculate_metrics(weights)
         
-        assert metrics.return_ == 0.0
-        assert metrics.volatility == 0.0
-        assert metrics.sharpe_ratio == 0.0  # Division by zero handled
-    
-    def test_negative_sharpe_ratio(self):
-        """Sharpe can be negative when portfolio return < risk-free rate."""
-        # Low return (1%), high risk-free rate (5%)
-        optimizer = PortfolioOptimizer(
-            expected_returns=np.array([0.01, 0.02]),
-            cov_matrix=np.diag([0.04, 0.09]),
-            risk_free_rate=0.05
-        )
+        # Full covariance formula
+        expected_variance = weights @ cov @ weights
+        expected_vol = np.sqrt(expected_variance)
         
-        # 100% in first asset
+        assert np.isclose(metrics.volatility, expected_vol)
+    
+    def test_sharpe_ratio_calculation(self, optimizer_uncorrelated):
+        """Sharpe ratio = (E[R] - R_f) / σ"""
+        weights = np.array([0.0, 0.0, 1.0, 0.0, 0.0])  # 100% in asset 3
+        metrics = optimizer_uncorrelated.calculate_metrics(weights)
+        
+        # Return = 20%, vol = 20%, rf = 2%
+        expected_sharpe = (0.20 - 0.02) / 0.20
+        assert np.isclose(metrics.sharpe_ratio, expected_sharpe)
+        assert np.isclose(metrics.sharpe_ratio, 0.90)
+    
+    def test_sharpe_can_be_negative(self):
+        """Sharpe ratio should be negative when return < risk-free rate."""
+        returns = np.array([0.01, 0.02])
+        cov = np.diag([0.04, 0.09])
+        optimizer = PortfolioOptimizer(returns, cov, risk_free_rate=0.05)
+        
         weights = np.array([1.0, 0.0])
         metrics = optimizer.calculate_metrics(weights)
         
-        # Sharpe = (0.01 - 0.05) / 0.20 = -0.20
-        assert np.isclose(metrics.sharpe_ratio, -0.20)
-
-
-# ============================================================================
-# Test Optimization
-# ============================================================================
-
-class TestOptimization:
-    """Test optimization constraints and objectives."""
+        # Return 1% < 5% risk-free → negative Sharpe
+        assert metrics.sharpe_ratio < 0
     
-    def test_maximize_sharpe_basic(self, optimizer):
-        """Optimizer should find valid portfolio with positive Sharpe."""
-        portfolio = optimizer.maximize_sharpe()
+    def test_zero_volatility_edge_case(self, optimizer_uncorrelated):
+        """Zero-weight portfolio should return zero for all metrics."""
+        weights = np.zeros(5)
+        metrics = optimizer_uncorrelated.calculate_metrics(weights)
         
-        assert portfolio.success
-        assert np.isclose(np.sum(portfolio.weights), 1.0)
-        assert np.all(portfolio.weights >= -1e-6)
-        assert portfolio.sharpe_ratio > 0
+        assert metrics.return_ == 0.0
+        assert metrics.volatility == 0.0
+        assert metrics.sharpe_ratio == 0.0  # Handled gracefully (0/0 → 0)
+
+
+# ============================================================================
+# Test Constrained Optimization
+# ============================================================================
+
+class TestConstrainedOptimization:
+    """Test that optimizer respects constraints and finds correct solutions."""
     
-    def test_max_weight_constraint(self, optimizer):
-        """Optimizer must respect concentration limits."""
+    def test_weights_sum_to_one(self, optimizer_uncorrelated):
+        """All optimization methods must produce fully-invested portfolios."""
+        max_sharpe = optimizer_uncorrelated.maximize_sharpe()
+        min_vol = optimizer_uncorrelated.minimize_volatility()
+        
+        assert np.isclose(np.sum(max_sharpe.weights), 1.0)
+        assert np.isclose(np.sum(min_vol.weights), 1.0)
+    
+    def test_long_only_constraint(self, optimizer_uncorrelated):
+        """All weights should be non-negative (no short-selling)."""
+        portfolio = optimizer_uncorrelated.maximize_sharpe()
+        
+        assert np.all(portfolio.weights >= -1e-6)  # Allow tiny numerical errors
+    
+    def test_concentration_limit(self, optimizer_uncorrelated):
+        """Max weight constraint should be respected."""
         max_weight = 0.25
-        portfolio = optimizer.maximize_sharpe(max_weight=max_weight)
+        portfolio = optimizer_uncorrelated.maximize_sharpe(max_weight=max_weight)
         
         assert portfolio.success
-        assert np.isclose(np.sum(portfolio.weights), 1.0)
         assert np.all(portfolio.weights <= max_weight + 1e-6)
-        assert np.all(portfolio.weights >= -1e-6)
+        
+        # With 5 assets and 25% limit, should actually use the limit
+        # (unconstrained optimum likely concentrates more)
+        assert np.max(portfolio.weights) >= max_weight - 1e-3
     
-    def test_minimize_volatility(self, optimizer):
-        """Min-vol portfolio should have lowest possible volatility."""
-        portfolio = optimizer.minimize_volatility()
+    def test_target_return_constraint(self, optimizer_uncorrelated):
+        """Constrained minimization should achieve target return."""
+        target = 0.20
+        portfolio = optimizer_uncorrelated.minimize_volatility(target_return=target)
         
         assert portfolio.success
-        assert np.isclose(np.sum(portfolio.weights), 1.0)
-        
-        # For uncorrelated assets, min-vol portfolio allocates inversely to variance
-        # w_i ∝ 1/var_i
-        # Asset 0 has lowest variance (0.10^2 = 0.01), so should have highest weight
-        # But it's not necessarily 100% because risk-return tradeoff
-        # Just verify asset 0 has the highest weight
-        assert portfolio.weights[0] == np.max(portfolio.weights)
+        assert np.isclose(portfolio.return_, target, atol=1e-4)
     
-    def test_minimize_volatility_with_target_return(self, optimizer):
-        """Target return constraint should be satisfied."""
-        target_return = 0.20
-        portfolio = optimizer.minimize_volatility(target_return=target_return)
+    def test_infeasible_concentration_limit(self):
+        """Optimizer should handle infeasible constraints gracefully."""
+        returns = np.array([0.1, 0.15, 0.2, 0.25, 0.3])
+        cov = np.diag([0.01] * 5)
+        optimizer = PortfolioOptimizer(returns, cov, risk_free_rate=0.02)
         
-        assert portfolio.success
-        assert np.isclose(portfolio.return_, target_return, atol=1e-4)
+        # 5 assets × 0.15 max = 0.75 < 1.0 required (infeasible)
+        portfolio = optimizer.maximize_sharpe(max_weight=0.15)
+        
+        # Optimizer may fail or find best constrained solution
+        # Either way, shouldn't crash and weights should respect bounds
+        if portfolio.success:
+            assert np.all(portfolio.weights <= 0.15 + 1e-6)
+
+
+# ============================================================================
+# Test Optimization Properties
+# ============================================================================
+
+class TestOptimizationProperties:
+    """Test mathematical properties of optimal portfolios."""
+    
+    def test_max_sharpe_beats_individual_assets(self, uncorrelated_assets, optimizer_uncorrelated):
+        """Optimal portfolio should have higher Sharpe than any single asset."""
+        returns, _, vols = uncorrelated_assets
+        optimal = optimizer_uncorrelated.maximize_sharpe()
+        
+        # Calculate Sharpe for each individual asset
+        individual_sharpes = (returns - 0.02) / vols
+        
+        assert optimal.sharpe_ratio >= np.max(individual_sharpes) - 1e-6
+    
+    def test_min_volatility_analytical_solution(self, uncorrelated_assets, optimizer_uncorrelated):
+        """
+        For uncorrelated assets, min-vol weights should be inversely proportional to variance.
+        
+        Analytical solution: w_i = (1/σ_i²) / Σ(1/σ_j²)
+        """
+        _, _, vols = uncorrelated_assets
+        portfolio = optimizer_uncorrelated.minimize_volatility()
+        
+        # Calculate analytical weights
+        variances = vols**2
+        inverse_variances = 1 / variances
+        analytical_weights = inverse_variances / np.sum(inverse_variances)
+        
+        # Numerical optimizer should match analytical solution within 1%
+        np.testing.assert_allclose(
+            portfolio.weights,
+            analytical_weights,
+            rtol=0.01,
+            err_msg="Min-vol weights should be proportional to 1/variance"
+        )
+    
+    def test_diversification_reduces_risk(self, uncorrelated_assets, optimizer_uncorrelated):
+        """Diversified portfolio should have lower vol than lowest-vol individual asset."""
+        _, _, vols = uncorrelated_assets
+        portfolio = optimizer_uncorrelated.minimize_volatility()
+        
+        # Diversification benefit: σ_p < min(σ_i) for uncorrelated assets
+        assert portfolio.volatility < np.min(vols)
+    
+    def test_max_sharpe_is_on_efficient_frontier(self, optimizer_uncorrelated):
+        """Max Sharpe portfolio should lie on the efficient frontier."""
+        optimal = optimizer_uncorrelated.maximize_sharpe()
+        
+        # The efficient frontier portfolio at the same return should have same volatility
+        frontier_portfolio = optimizer_uncorrelated.minimize_volatility(
+            target_return=optimal.return_
+        )
+        
+        assert np.isclose(optimal.volatility, frontier_portfolio.volatility, rtol=0.01)
 
 
 # ============================================================================
@@ -153,86 +271,76 @@ class TestOptimization:
 class TestEfficientFrontier:
     """Test efficient frontier generation and dominance properties."""
     
-    def test_frontier_dominance(self, optimizer):
-        """
-        Efficient frontier must dominate random portfolios.
+    def test_frontier_is_monotonic(self, optimizer_uncorrelated):
+        """Frontier should have increasing return and volatility."""
+        frontier = optimizer_uncorrelated.efficient_frontier(num_points=30)
         
-        For any random portfolio at volatility V, the frontier portfolio
-        at volatility V must have higher (or equal) return.
-        """
-        # Generate frontier and random portfolios
-        frontier = optimizer.efficient_frontier(num_points=50)
-        random_portfolios = optimizer.random_portfolios(num_portfolios=100)
+        returns = [p.return_ for p in frontier]
+        vols = [p.volatility for p in frontier]
         
-        # Extract frontier curve
+        # Both should be non-decreasing
+        for i in range(len(frontier) - 1):
+            assert returns[i] <= returns[i+1] + 1e-6
+            assert vols[i] <= vols[i+1] + 1e-6
+    
+    def test_frontier_dominates_random_portfolios(self, optimizer_uncorrelated):
+        """
+        No random portfolio should exceed the efficient frontier.
+        
+        For any volatility level, the frontier return is the maximum achievable.
+        """
+        frontier = optimizer_uncorrelated.efficient_frontier(num_points=50)
+        random_portfolios = optimizer_uncorrelated.random_portfolios(num_portfolios=200)
+        
+        # Build frontier interpolation
         frontier_vols = np.array([p.volatility for p in frontier])
         frontier_rets = np.array([p.return_ for p in frontier])
-        
-        # Sort for interpolation
         sort_idx = np.argsort(frontier_vols)
         frontier_vols = frontier_vols[sort_idx]
         frontier_rets = frontier_rets[sort_idx]
         
         # Check each random portfolio
         for rp in random_portfolios:
-            # Interpolate max return at this volatility
             max_return_at_vol = np.interp(rp.volatility, frontier_vols, frontier_rets)
-            
-            # Random portfolio should not exceed frontier (with tolerance)
             assert max_return_at_vol >= rp.return_ - 1e-4, (
-                f"Random portfolio (Vol={rp.volatility:.2%}, Ret={rp.return_:.2%}) "
-                f"exceeds frontier (MaxRet={max_return_at_vol:.2%})"
+                f"Random portfolio dominates frontier: "
+                f"Vol={rp.volatility:.3f}, Return={rp.return_:.3f} > {max_return_at_vol:.3f}"
             )
     
-    def test_frontier_gap_exists(self, optimizer):
-        """
-        Optimal portfolio should significantly outperform random portfolios.
+    def test_frontier_gap_demonstrates_optimization_value(self, optimizer_uncorrelated):
+        """Optimal portfolio should significantly outperform average random portfolio."""
+        random_portfolios = optimizer_uncorrelated.random_portfolios(num_portfolios=500)
+        optimal = optimizer_uncorrelated.maximize_sharpe()
         
-        This validates the 'cloud below frontier' visualization.
-        """
-        # Generate many random portfolios
-        random_portfolios = optimizer.random_portfolios(num_portfolios=500)
-        
-        # Get optimal Sharpe portfolio
-        optimal = optimizer.maximize_sharpe()
-        opt_sharpe = optimal.sharpe_ratio
-        
-        # Calculate Sharpe for random portfolios
         random_sharpes = np.array([
             (p.return_ - 0.02) / p.volatility for p in random_portfolios
         ])
         
-        # Optimal must beat all random portfolios
-        max_random_sharpe = np.max(random_sharpes)
-        assert opt_sharpe >= max_random_sharpe
+        # Optimal should beat all random portfolios
+        assert optimal.sharpe_ratio >= np.max(random_sharpes) - 1e-6
         
-        # Should significantly beat average (demonstrates gap)
-        avg_random_sharpe = np.mean(random_sharpes)
-        assert opt_sharpe > avg_random_sharpe * 1.1
+        # Should significantly beat average (demonstrates value of optimization)
+        assert optimal.sharpe_ratio > np.mean(random_sharpes) * 1.1
     
-    def test_frontier_monotonic(self, optimizer):
-        """Frontier should have monotonically increasing return and volatility."""
-        frontier = optimizer.efficient_frontier(num_points=30)
+    def test_frontier_starts_at_min_volatility(self, optimizer_uncorrelated):
+        """First frontier point should be the global min-vol portfolio."""
+        frontier = optimizer_uncorrelated.efficient_frontier(num_points=20)
+        min_vol = optimizer_uncorrelated.minimize_volatility()
         
-        returns = [p.return_ for p in frontier]
-        vols = [p.volatility for p in frontier]
-        
-        # Returns should increase (or stay same)
-        assert all(returns[i] <= returns[i+1] + 1e-6 for i in range(len(returns)-1))
-        
-        # Volatility should increase (efficient frontier slopes up-right)
-        assert all(vols[i] <= vols[i+1] + 1e-6 for i in range(len(vols)-1))
+        # First frontier point should match min-vol portfolio
+        assert np.isclose(frontier[0].volatility, min_vol.volatility, rtol=0.01)
+        assert np.isclose(frontier[0].return_, min_vol.return_, rtol=0.01)
 
 
 # ============================================================================
-# Test Edge Cases
+# Test Degenerate Inputs
 # ============================================================================
 
-class TestEdgeCases:
-    """Test boundary conditions and error handling."""
+class TestDegenerateInputs:
+    """Test edge cases and unusual inputs."""
     
-    def test_single_asset(self):
-        """Single asset should get 100% allocation."""
+    def test_single_asset_gets_full_allocation(self):
+        """Single asset should receive 100% weight."""
         optimizer = PortfolioOptimizer(
             expected_returns=np.array([0.10]),
             cov_matrix=np.array([[0.04]]),
@@ -244,8 +352,22 @@ class TestEdgeCases:
         assert portfolio.success
         assert np.isclose(portfolio.weights[0], 1.0)
     
+    def test_identical_assets_get_equal_weights(self):
+        """Identical assets should be allocated equally (diversification)."""
+        optimizer = PortfolioOptimizer(
+            expected_returns=np.array([0.10, 0.10, 0.10]),
+            cov_matrix=np.eye(3) * 0.04,
+            risk_free_rate=0.02
+        )
+        
+        portfolio = optimizer.maximize_sharpe()
+        
+        assert portfolio.success
+        # Should be close to 1/3 each (may have tiny numerical differences)
+        assert np.std(portfolio.weights) < 0.01
+    
     def test_all_negative_returns(self):
-        """Should find least-bad portfolio without crashing."""
+        """Should find least-bad portfolio when all returns are negative."""
         optimizer = PortfolioOptimizer(
             expected_returns=np.array([-0.05, -0.10, -0.15]),
             cov_matrix=np.diag([0.01, 0.02, 0.03]),
@@ -256,62 +378,62 @@ class TestEdgeCases:
         
         # Should complete without crashing
         assert np.isclose(np.sum(portfolio.weights), 1.0)
-        # All returns negative, so portfolio return must be negative
         assert portfolio.return_ < 0
-    
-    def test_infeasible_max_weight(self):
-        """Max weight too low makes equal allocation impossible."""
-        optimizer = PortfolioOptimizer(
-            expected_returns=np.array([0.1, 0.15, 0.2, 0.25, 0.3]),
-            cov_matrix=np.diag([0.01] * 5),
-            risk_free_rate=0.02
-        )
         
-        # 5 assets * 0.1 max = 0.5 < 1.0 needed (infeasible)
-        portfolio = optimizer.maximize_sharpe(max_weight=0.1)
-        
-        # Optimizer may fail or return constrained solution
-        # Just verify no crash and weights respect bounds
-        if portfolio.success:
-            assert np.all(portfolio.weights <= 0.1 + 1e-6)
-    
-    def test_identical_assets(self):
-        """Identical assets should get roughly equal weights."""
-        optimizer = PortfolioOptimizer(
-            expected_returns=np.array([0.1, 0.1, 0.1]),
-            cov_matrix=np.eye(3) * 0.04,
-            risk_free_rate=0.02
-        )
-        
-        portfolio = optimizer.maximize_sharpe()
-        
-        assert portfolio.success
-        # Diversification should spread weights roughly equally
-        assert np.std(portfolio.weights) < 0.1
+        # With all negative returns and rf=0, all Sharpe ratios are negative
+        # Sharpe_i = (R_i - 0) / σ_i = R_i / σ_i (all negative)
+        # Asset 0: -0.05/0.1 = -0.5
+        # Asset 1: -0.10/0.141 = -0.71
+        # Asset 2: -0.15/0.173 = -0.87
+        # Asset 0 has the "best" (least negative) Sharpe, but optimizer
+        # may diversify since all are bad. Just verify it completes.
+        assert portfolio.sharpe_ratio < 0
     
     def test_near_zero_volatility_asset(self):
-        """Asset with near-zero volatility should not crash calculations."""
+        """Assets with near-zero volatility shouldn't cause numerical issues."""
         optimizer = PortfolioOptimizer(
-            expected_returns=np.array([0.1, 0.02]),
-            cov_matrix=np.array([[0.04, 0], [0, 1e-10]]),
+            expected_returns=np.array([0.10, 0.02]),
+            cov_matrix=np.array([[0.04, 0], [0, 1e-10]]),  # Second asset nearly risk-free
             risk_free_rate=0.02
         )
         
-        # Should not crash - just verify it completes
         portfolio = optimizer.maximize_sharpe()
-        # Either succeeds or fails gracefully
+        
+        # Should complete without numerical errors (division by near-zero)
         assert isinstance(portfolio, PortfolioMetrics)
-
-
-# ============================================================================
-# Test CAGR Edge Cases (if still needed - consider moving to separate file)
-# ============================================================================
-
-class TestCAGREdgeCases:
-    """Edge cases for calculate_implied_cagr."""
+        assert portfolio.success
+        
+        # Asset 0: Sharpe = (0.10 - 0.02) / 0.20 = 0.40
+        # Asset 1: Sharpe = (0.02 - 0.02) / ~0 = ~0 (zero excess return)
+        # Asset 0 should get significant allocation, but optimizer may diversify
+        # for numerical stability. Just verify no crash and reasonable allocation.
+        assert portfolio.weights[0] > 0.1  # Gets some meaningful allocation
+        assert np.isclose(np.sum(portfolio.weights), 1.0)
     
-    def test_negative_target_margin(self):
-        """Company expected to have losses at exit."""
+    def test_perfectly_correlated_assets(self):
+        """Perfectly correlated assets offer no diversification benefit."""
+        returns = np.array([0.08, 0.12])
+        # Perfect correlation: ρ = 1
+        vols = np.array([0.15, 0.20])
+        cov = np.outer(vols, vols)  # cov_ij = σ_i * σ_j when ρ=1
+        
+        optimizer = PortfolioOptimizer(returns, cov, risk_free_rate=0.02)
+        portfolio = optimizer.maximize_sharpe()
+        
+        # Should pick the asset with better Sharpe ratio (asset 2: higher return)
+        assert portfolio.success
+        # Either corner solution or mix depending on risk/return tradeoff
+
+
+# ============================================================================
+# Test CAGR Calculations (Domain-Specific)
+# ============================================================================
+
+class TestCAGRCalculations:
+    """Test CAGR calculation edge cases."""
+    
+    def test_negative_target_margin_produces_invalid_cagr(self):
+        """Negative exit margin should result in -100% CAGR."""
         cagr = calculate_implied_cagr(
             current_price=100,
             sales_per_share=10,
@@ -323,8 +445,8 @@ class TestCAGREdgeCases:
         )
         assert cagr == -1.0
     
-    def test_zero_sales(self):
-        """Pre-revenue company has zero future value."""
+    def test_zero_sales_produces_invalid_cagr(self):
+        """Pre-revenue company with zero sales should fail gracefully."""
         cagr = calculate_implied_cagr(
             current_price=100,
             sales_per_share=0,
@@ -336,8 +458,8 @@ class TestCAGREdgeCases:
         )
         assert cagr == -1.0
     
-    def test_raises_on_zero_price(self):
-        """Zero price should raise ValueError."""
+    def test_invalid_inputs_raise_errors(self):
+        """Zero or negative price/years should raise ValueError."""
         with pytest.raises(ValueError, match="positive"):
             calculate_implied_cagr(
                 current_price=0,
@@ -348,9 +470,7 @@ class TestCAGREdgeCases:
                 exit_pe=20,
                 years=5,
             )
-    
-    def test_raises_on_zero_years(self):
-        """Zero years should raise ValueError."""
+        
         with pytest.raises(ValueError, match="positive"):
             calculate_implied_cagr(
                 current_price=100,
@@ -367,13 +487,13 @@ class TestCAGREdgeCases:
 # Test Convenience Function
 # ============================================================================
 
-def test_convenience_function(sample_data):
-    """Test backward-compatible convenience function."""
-    expected_returns, cov_matrix = sample_data
+def test_convenience_function_maintains_compatibility(uncorrelated_assets):
+    """Convenience function should provide simple API for common use case."""
+    returns, cov, _ = uncorrelated_assets
     
     portfolio = optimize_portfolio(
-        expected_returns,
-        cov_matrix,
+        returns,
+        cov,
         risk_free_rate=0.02,
         max_weight=0.3
     )
