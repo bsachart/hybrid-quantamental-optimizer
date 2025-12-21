@@ -31,3 +31,4 @@ data/uploads/*.csv
 *.log
 .ruff_cache/
 tmp/
+codebase_snapshot.txt

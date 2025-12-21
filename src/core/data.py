@@ -54,7 +54,27 @@ def load_and_validate_prices(file_path_or_buffer) -> pd.DataFrame:
         except Exception:
             raise ValueError("First column must be Date.")
 
+    # NEW: Validate we have numeric data
     df_numeric = df.apply(pd.to_numeric, errors="coerce")
+    
+    # Check for columns that are entirely NaN (non-numeric)
+    all_nan_cols = df_numeric.columns[df_numeric.isna().all()].tolist()
+    if all_nan_cols:
+        raise ValueError(f"Non-numeric data found in columns: {all_nan_cols}")
+    
+    # Check for minimum data points
+    if len(df_numeric) < 10:
+        raise ValueError("Price history must contain at least 10 data points for meaningful analysis.")
+    
+    # Check for too many NaN values
+    nan_pct = df_numeric.isna().sum() / len(df_numeric)
+    high_nan_cols = nan_pct[nan_pct > 0.2].index.tolist()
+    if high_nan_cols:
+        raise ValueError(
+            f"Columns with >20% missing data: {high_nan_cols}. "
+            f"Please clean your data or remove these tickers."
+        )
+    
     return df_numeric.sort_index()
 
 
@@ -63,7 +83,7 @@ def fetch_prices_from_yfinance(
 ) -> pd.DataFrame:
     """
     Downloads historical adjusted closing prices from Yahoo Finance.
-    
+
     Args:
         tickers: List of ticker symbols.
         period: Time period (e.g., '1y', '2y', '5y').
@@ -74,23 +94,25 @@ def fetch_prices_from_yfinance(
 
     try:
         # auto_adjust=True for split/dividend adjusted prices
-        df = yf.download(tickers, period=period, interval=interval, progress=False, auto_adjust=True)
-        
+        df = yf.download(
+            tickers, period=period, interval=interval, progress=False, auto_adjust=True
+        )
+
         # Handle yfinance multi-index vs single-index quirks
         if isinstance(df.columns, pd.MultiIndex):
             # If multiple tickers, columns are (Column, Ticker)
             # We want just the 'Close' prices for each ticker
-            df = df['Close']
-        elif 'Close' in df.columns:
+            df = df["Close"]
+        elif "Close" in df.columns:
             # If single ticker, columns might just be Column names
-            df = df[['Close']]
+            df = df[["Close"]]
             df.columns = [tickers[0]]
-        
+
         if df.empty:
             raise ValueError(f"No data returned for tickers: {tickers}")
-            
+
         return df.sort_index()
-        
+
     except Exception as e:
         raise ValueError(f"Failed to fetch data from Yahoo Finance: {e}")
 
@@ -113,26 +135,33 @@ def load_and_validate_asset_metrics(file_path_or_buffer) -> pd.DataFrame:
         raise ValueError(f"Failed to read CSV: {e}")
 
     # Required for the core logic if uploaded
-    possible_numeric = ["Implied Volatility (%)", "Alpha Delta (%)", "Custom Return (%)"]
-    
+    possible_numeric = [
+        "Implied Volatility (%)",
+        "Alpha Delta (%)",
+        "Custom Return (%)",
+    ]
+
     # Check for missing basic columns
-    required_columns = ["Implied Volatility (%)", "Alpha Delta (%)"]
+    required_columns = ["Implied Volatility (%)"]
     missing_cols = [col for col in required_columns if col not in df.columns]
     if missing_cols:
         # Fallback to legacy names if they exist and convert to %
         legacy_map = {
             "Implied Volatility": "Implied Volatility (%)",
             "Alpha Delta": "Alpha Delta (%)",
-            "Custom Return": "Custom Return (%)"
+            "Custom Return": "Custom Return (%)",
         }
         found_legacy = False
         for old, new in legacy_map.items():
             if old in df.columns:
                 df[new] = df[old] * 100.0
                 found_legacy = True
-        
-        if not found_legacy:
-            raise ValueError(f"Missing required columns: {required_columns}")
+
+        if not found_legacy and any(col not in df.columns for col in required_columns):
+            # Check again after legacy mapping
+            still_missing = [col for col in required_columns if col not in df.columns]
+            if still_missing:
+                raise ValueError(f"Missing required columns: {still_missing}")
 
     # Validate numeric types
     for col in possible_numeric:
@@ -143,6 +172,9 @@ def load_and_validate_asset_metrics(file_path_or_buffer) -> pd.DataFrame:
         elif col == "Custom Return (%)":
             # Default if missing but requested by UX
             df[col] = 8.0
+        elif col == "Alpha Delta (%)":
+            # Default to 0.0 if missing (optional now)
+            df[col] = 0.0
 
     # Default constraint to 'Both' if missing
     if "Constraint" not in df.columns:
@@ -152,7 +184,9 @@ def load_and_validate_asset_metrics(file_path_or_buffer) -> pd.DataFrame:
         df["Constraint"] = df["Constraint"].str.capitalize()
         invalid = df[~df["Constraint"].isin(valid_constraints)]
         if not invalid.empty:
-            raise ValueError(f"Invalid constraints found for: {invalid.index.tolist()}. Must be Long, Short, or Both.")
+            raise ValueError(
+                f"Invalid constraints found for: {invalid.index.tolist()}. Must be Long, Short, or Both."
+            )
 
     return df
 
@@ -170,7 +204,8 @@ def align_tickers(
 
     if len(common_tickers) < len(metrics.index):
         missing = metrics.index.difference(prices.columns)
-        warnings.warn(f"Dropping tickers with missing price history: {missing.tolist()}")
+        warnings.warn(
+            f"Dropping tickers with missing price history: {missing.tolist()}"
+        )
 
     return prices[common_tickers], metrics.loc[common_tickers]
-
