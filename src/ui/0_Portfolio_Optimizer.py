@@ -509,7 +509,6 @@ if st.session_state["prices"] is not None:
             tickers=tickers,
             asset_returns=expected_returns,
             asset_vols=asset_vols,
-            asset_vols=asset_vols,
             rf_rate=rf_rate,
         )
 
