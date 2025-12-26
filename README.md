@@ -19,7 +19,7 @@ Best for long-term strategic investors. We derive an **Implied Annual Return** b
 *   **Linear Margin Ramp:** The model interpolates a path from current Net Profit Margin (NPM) to a target Terminal Margin.
 *   **The Sales Boost:** Annual sales grow by the sum of organic growth and the current year's profit margin. This treats the business as a compounding machine where earnings are reinvested into top-line expansion.
 *   **Organic Growth Note:** Includes Stock-Based Compensation (SBC), but excludes buybacks and dividend reinvestment.
-*   **Logic:** $ \mu = (MC_{exit} / MC_{current})^{1/N} - 1 $
+*   **Logic:** $\mu = (MC_{exit} / MC_{current})^{1/N} - 1$
 
 ---
 
