@@ -1,47 +1,377 @@
 # Hybrid Quantamental Optimizer
 
-A portfolio construction tool designed to fix the "rear-view mirror" bias of Modern Portfolio Theory (MPT).
+> **Modern Portfolio Theory evolved for the fundamental investor.**
 
-The project explicitly **decouples** the estimation of returns, the modeling of risk, and the mathematical optimization.
-
----
-
-## 1. The Return Engine (Forecasting $\mu$)
-We do not rely on past price performance to predict future returns. The engine supports two distinct modes of operation:
-
-### Mode A: View-Based Alpha (Simple)
-Best for tactical adjustments based on macro views or specific price targets.
-*   **Logic:** $\mu = \text{Market Return} + \delta_{\text{alpha}}$
-*   **Inputs:** A baseline market return (e.g., 0.08) and an asset-specific "Alpha Delta" (e.g., 0.02 for outperformance).
-
-### Mode B: Fundamental Implied CAGR (Complex)
-Best for long-term strategic investors. We derive an **Implied Annual Return** by simulating business performance over an $N$-year holding period.
-*   **Linear Margin Ramp:** The model interpolates a path from current Net Profit Margin (NPM) to a target Terminal Margin.
-*   **The Sales Boost:** Annual sales grow by the sum of organic growth and the current year's profit margin. This treats the business as a compounding machine where earnings are reinvested into top-line expansion.
-*   **Organic Growth Note:** Includes Stock-Based Compensation (SBC), but excludes buybacks and dividend reinvestment.
-*   **Logic:** $\mu = (MC_{exit} / MC_{current})^{1/N} - 1$
+A portfolio construction engine that fixes the "rear-view mirror" bias of traditional MPT by explicitly decoupling forward-looking return forecasting, risk modeling, and mathematical optimization.
 
 ---
 
-## 2. The Risk Engine (Forecasting $\Sigma$)
-Historical volatility is often a lagging indicator. This engine uses a **Forward-Looking Risk** model.
+## 1. Project Overview
 
-*   **Implied Volatility (IV):** We anchor the risk of each asset to current options market pricing (IV).
-*   **Correlation:** We preserve structural historical correlations to understand how assets move relative to one another.
+Traditional MPT relies on historical returns to predict the future. This is fundamentally backward-looking and fails during regime changes.
 
----
+**Our Approach**: Treat return forecasting, risk modeling, and optimization as three independent problems:
 
-## 3. The Optimization Engine (The Solver)
-Once $\mu$ (Returns) and $\Sigma$ (Risk) are calculated, they are passed to a solver that maximizes the Sharpe Ratio.
+1.  **Return Engine**: Generate forward-looking expected returns (Fundamental CAGR).
+2.  **Risk Engine**: Model covariance using forward-looking volatility (Implied Vol).
+3.  **Optimization Engine**: Find optimal weights given $\mu$ and $\Sigma$.
 
-**Key Features:**
-*   **Asset-Specific Constraints:** Directional limits per asset (Long/Short/Both).
-*   **Efficient Frontier Calculation:** Visualizes the optimal portfolio against the feasible region.
+**Web Interface**: A graphical interface for this engine is available at: [LINK_PLACEHOLDER]
 
 ---
 
-## Workflow
-1. **Configure Universe:** Choose your mode (Simple or Fundamental) and set ticker-specific parameters.
-2. **Fetch Market Data:** The script retrieves weekly price history and current market capitalizations.
-3. **Generate Metrics:** The engine outputs `universe.csv` and `metrics.csv` containing forward-looking returns and IV.
-4. **Optimize:** Ingest these files into the optimizer to find the Maximum Sharpe Ratio weights.
+## 2. Quick Start
+
+### Step 1: Generate Data
+A utility script is provided to fetch historical prices and compute fundamental metrics.
+
+```bash
+# Generates historical_prices.csv and asset_metrics.csv
+python src/data/generate_universe.py
+```
+
+### Step 2: Run Optimization
+
+```python
+from portfolio import PortfolioEngine
+
+# Initialize engine
+engine = PortfolioEngine()
+
+# Load data (automatically validates and aligns)
+engine.load_prices("historical_prices.csv")
+engine.load_metrics("asset_metrics.csv")
+
+# A. Optimize for a specific volatility target (Capital Market Line)
+portfolio = engine.optimize(
+    risk_model="forward-looking", 
+    target_volatility=0.15,       # 15% Annual Volatility
+    risk_free_rate=0.04           # 4% Risk-Free Rate
+)
+
+# B. Optimize for the Tangency Portfolio (Max Sharpe)
+# (Occurs if target_volatility is not provided)
+tangency = engine.optimize(risk_model="forward-looking")
+
+# C. Generate Efficient Frontier Points
+# (Pass a list of volatilities)
+frontier = engine.optimize(target_volatility=[0.10, 0.15, 0.20])
+
+# Analyze results
+print(portfolio.summary())
+portfolio.plot()
+```
+
+---
+
+## 3. Data Specifications
+
+The engine requires two specific CSV files. 
+
+### A. Price History (`historical_prices.csv`)
+Used to calculate correlation matrices.
+
+*   **Format**: Time-series.
+*   **Columns**: `date` (YYYY-MM-DD), followed by one column per ticker.
+
+```csv
+date,AAPL,GOOG,TSLA
+2023-01-31,150.23,105.44,250.67
+2023-02-28,152.11,108.22,255.33
+```
+
+### B. Asset Metrics (`asset_metrics.csv`)
+Used for $\mu$ (Expected Returns) and diagonal $\Sigma$ (Volatilities). This file is generated by the provided Python script.
+
+*   **Format**: Cross-sectional.
+*   **Units**: **Decimals/Base** (e.g., 0.12 = 12%).
+
+```csv
+ticker,expected_return,implied_volatility,min_weight,max_weight
+AAPL,0.12,0.25,0.0,1.0
+GOOG,0.15,0.28,0.0,1.0
+TSLA,0.03,0.10,-1.0,0.0
+```
+
+| Column | Description | Required For |
+| :--- | :--- | :--- |
+| `ticker` | Symbol matching price CSV | All |
+| `expected_return` | Annualized expected return (Decimal) | All |
+| `implied_volatility` | Forward-looking annual vol (Decimal) | `risk_model="forward-looking"` |
+| `min_weight` | Minimum allocation (0.0 = long only) | All |
+| `max_weight` | Maximum allocation (1.0 = no leverage) | All |
+
+---
+
+## 4. Methodology: Return Models ($\mu$)
+
+We prioritize fundamental derivation over historical extrapolation.
+
+### Fundamental Implied CAGR (The "Business Model")
+
+We model returns by simulating the business fundamentals $N$ years into the future.
+
+**1. Linear Margin Ramp**  
+The model interpolates a path from the current Net Profit Margin (NPM) to a target Terminal NPM.
+$$NPM_t = NPM_{start} + \frac{t}{N} (NPM_{terminal} - NPM_{start})$$
+
+**2. Sales Growth (Self-Funding)**  
+Profitable companies reinvest earnings. We treat NPM as fuel for top-line expansion.
+$$Sales_t = Sales_{t-1} \times (1 + \text{OrganicGrowth} + NPM_{t-1})$$
+*Note: Organic Growth includes effects like SBC but excludes buybacks.*
+
+**3. Terminal Valuation & Implied Return**  
+$$MC_{\text{exit}} = Sales_N \times NPM_N \times PE_{\text{exit}}$$
+$$\mu = \left(\frac{MC_{\text{exit}}}{MC_{\text{current}}}\right)^{1/N} - 1$$
+
+---
+
+## 5. Methodology: Risk Models ($\Sigma$)
+
+### Option A: Historical Covariance
+Classic MPT approach using the sample covariance of historical returns.
+```python
+risk_model="historical"
+```
+
+### Option B: Hybrid Implied Volatility (Recommended)
+Combines the **structure** of the past with the **magnitude** of the future.
+
+*   **Correlations ($\rho$)**: Derived from `historical_prices.csv` (Assets usually maintain structural relationships, e.g., Tech moves with Tech).
+*   **Volatility ($\sigma$)**: Derived from `asset_metrics.csv` (IV, representing the market's forward-looking fear).
+
+**Formula:**
+$$\Sigma_{ij} = \rho_{ij}^{\text{historical}} \times \sigma_i^{\text{implied}} \times \sigma_j^{\text{implied}}$$
+
+This creates a covariance matrix where the diagonal is the Options Market IV, but the off-diagonal elements respect historical correlations.
+
+```python
+risk_model="forward-looking"
+```
+
+---
+
+## 6. Methodology: Optimization
+
+The solver uses `cvxpy` to perform Mean-Variance Optimization.
+
+### The Objective
+Maximize the Sharpe Ratio:
+$$\text{maximize} \frac{w^T \mu - R_f}{\sqrt{w^T \Sigma w}}$$
+
+Subject to:
+1.  $\sum w_i = 1$
+2.  $w_{\min} \leq w_i \leq w_{\max}$
+
+### Capital Market Line (CML) Allocation
+If a `target_volatility` is provided, the engine:
+
+1.  Solves for the **Tangency Portfolio** (Max Sharpe).
+2.  Allocates between the Tangency Portfolio and Cash ($R_f$) to hit the exact target volatility $\sigma_p$.
+
+$$w_{\text{risky}} = \frac{\sigma_p}{\sigma_{\text{tangency}}}$$
+$$w_{\text{cash}} = 1 - w_{\text{risky}}$$
+
+
+
+<!-- 
+## Quick Start
+
+```python
+from portfolio import PortfolioEngine
+
+# Initialize engine
+engine = PortfolioEngine()
+
+# Load data (automatically validates and aligns)
+engine.load_prices("historical_prices.csv")
+engine.load_metrics("asset_metrics.csv")
+
+# Optimize with target volatility
+result = engine.optimize(
+  risk_model="forward-looking", # or "historical"
+  target_volatility=0.15
+)
+
+# Analyze results
+print(result.summary())
+result.plot()
+```
+
+**That's it.** The engine handles:
+
+- Data validation and cleaning
+- Frequency detection
+- Ticker alignment
+- Constraint conversion
+- Cash allocation
+
+## Return Models (Forecasting $\mu$)
+
+### A. Custom Returns (Direct Forecasting)
+
+Best for: Third-party estimates, analyst targets
+
+$$\mu_i = \text{Custom Return}_i$$
+
+---
+
+### B. Fundamental Implied CAGR (Strategic)
+
+Best for: Long-term fundamental investing
+
+**The Business Model Simulation**:
+
+1. Start with current Sales and Net Profit Margin (NPM)
+2. Ramp NPM linearly to Terminal NPM over N years
+3. Grow Sales by: Organic Growth + Current Year's Margin
+4. Calculate Terminal Market Cap: Sales × Terminal NPM × Exit P/E
+5. Implied Return:
+
+$$\mu = \left(\frac{MC_{\text{exit}}}{MC_{\text{current}}}\right)^{1/N} - 1$$
+
+**Why the Sales Boost?**  
+Profitable companies reinvest earnings into growth. The model treats NPM as fuel for top-line expansion, simulating a compounding business.
+
+**Organic Growth Note**: Includes Stock-Based Compensation (SBC) but excludes buybacks/dividends.
+
+```python
+# Configured in data generation script (see src/data/generate_universe.py)
+TickerDef(
+    ticker="GOOG",
+    market_cap=2000.0,        # Current market cap in billions
+    current_sales=307.0,      # Current sales in billions
+    current_npm=0.24,         # Current net profit margin
+    organic_growth=0.10,      # Organic growth rate
+    terminal_npm=0.26,        # Target margin in N years
+    exit_pe=22.0,             # Terminal P/E multiple
+    n_years=5
+)
+```
+
+---
+
+## Risk Models (Forecasting $\Sigma$)
+
+### 1. Historical Covariance
+
+Pure historical approach (classic MPT).
+
+```python
+result = engine.optimize(risk_model="historical")
+```
+
+---
+
+### 2. Hybrid Implied Volatility (Recommended)
+
+Forward-looking volatility with historical correlations.
+
+**Why Hybrid?**
+
+- **Historical Correlation**: Stable structural relationships (tech stocks move together)
+- **Implied Volatility**: Forward-looking magnitude (market's expectation of swings)
+
+Sigma = (find formula)
+
+```python
+result = engine.optimize(
+    risk_model="forward-looking",
+)
+```
+
+---
+
+## Optimization (The Solver)
+
+### Capital Market Line Allocation
+
+The engine finds the **Tangency Portfolio** (maximum Sharpe ratio) and then allocates between it and cash to hit your target volatility.
+
+```python
+result = engine.optimize(
+    target_volatility=0.15,  # 15% annual vol
+    risk_free_rate=0.04,     # 4% cash return
+)
+```
+
+---
+
+## Data Format
+
+### Price History CSV
+
+```csv
+date,AAPL,GOOG,TSLA
+2023-01-31,150.23,105.44,250.67
+2023-02-28,152.11,108.22,255.33
+...
+```
+
+**Requirements**:
+
+- First column: Date (YYYY-MM-DD)
+- Other columns: Ticker prices
+
+### Asset Metrics CSV
+
+```csv
+ticker,expected_return,implied_volatility,min_weight,max_weight
+AAPL,12.0,25.0,0.0,1.0
+GOOG,15.0,28.0,0.0,1.0
+TSLA,3.0,10.0,-1.0,0.0
+```
+
+**Columns**:
+
+- **expected_return**: The expected return of the asset (base, not pct)
+- **implied_volatility**: Current options IV (base, not pct)
+  - Optional if risk_model="historical".
+- **min_weight**: The minimum weight of the asset
+- **max_weight**: The maximum weight of the asset
+
+---
+
+## Mathematical Background
+
+### Mean-Variance Optimization (Markowitz, 1952)
+
+Given expected returns $\mu$ and covariance matrix $\Sigma$, find weights $w$ that maximize:
+
+$$\text{Sharpe Ratio} = \frac{w^T \mu - R_f}{\sqrt{w^T \Sigma w}}$$
+
+Subject to:
+
+- $\sum w_i = 1$ (fully invested)
+- $w_i \in [w_{\min,i}, w_{\max,i}]$ (position limits)
+
+---
+
+### Capital Market Line (Tobin, 1958)
+
+Optimal portfolio lies on the **Capital Market Line**:
+
+$$E[R_p] = R_f + \frac{E[R_T] - R_f}{\sigma_T} \cdot \sigma_p$$
+
+Where:
+
+- $R_T$, $\sigma_T$: Return and vol of tangency portfolio
+- $R_f$: Risk-free rate
+- $\sigma_p$: Target portfolio volatility
+
+**Allocation**:
+$$w_{\text{risky}} = \frac{\sigma_p}{\sigma_T}, \quad w_{\text{cash}} = 1 - w_{\text{risky}}$$
+
+---
+
+Things to include
+
+- A python script is provided to compute the asset_metrics.csv and fetch historical_prices.csv.
+- The script computes the fundamental implied cagr ("expected_return" column).
+- Mention the format of the expected asset_metrics.csv and historical_prices.csv files
+- Mention that not all column from the asset_metrics.csv will be used depending on the risk model.
+- A corresponding web page is available at [some_link_i_will_update] to run the optimizer and visualize the results.
+- **Linear Margin Ramp:** The model interpolates a path from current Net Profit Margin (NPM) to a target Terminal Margin.
+- if target_volatility is not provided, the optimizer will return the tangency portfolio.
+- target_volatility can also take a list and return the portfolio for each volatility.
+ -->
