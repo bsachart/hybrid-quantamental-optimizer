@@ -1,53 +1,105 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# The directory you want to create a snapshot of.
-TARGET_DIR="src"
+#######################################
+# Configuration (single source of truth)
+#######################################
 
-# Root-level README file
-README_FILE="README.md"
+# Directories to snapshot (relative to project root)
+SOURCE_DIRS=("src")
 
-# The name of the output file.
+# Root-level files to include
+ROOT_FILES=("README.md")
+
+# Output file
 OUTPUT_FILE="codebase_snapshot.txt"
 
-# --- Script starts here ---
+# File patterns to exclude
+EXCLUDE_PATHS=("*/__pycache__/*")
+EXCLUDE_NAMES=("*.pyc" "*.pyo")
 
-# Check that the target directory exists.
-if [ ! -d "$TARGET_DIR" ]; then
-    echo "Error: The '$TARGET_DIR' directory was not found in the current location."
-    echo "Please run this script from your project's root directory."
-    exit 1
-fi
+#######################################
+# Utility functions (internal)
+#######################################
 
-# Check that README.md exists (non-fatal)
-if [ ! -f "$README_FILE" ]; then
-    echo "Warning: '$README_FILE' not found. It will be skipped."
-fi
+log() {
+    printf "[snapshot] %s\n" "$1"
+}
 
-# Remove the old snapshot file if it exists.
-rm -f "$OUTPUT_FILE"
+require_exists() {
+    local path="$1"
+    if [[ ! -e "$path" ]]; then
+        log "ERROR: '$path' not found"
+        exit 1
+    fi
+}
 
-echo "Creating a snapshot of the '$TARGET_DIR' directory..."
-echo "The output will be saved to: $OUTPUT_FILE"
+is_excluded() {
+    local file="$1"
+    for pattern in "${EXCLUDE_PATHS[@]}"; do
+        [[ "$file" == $pattern ]] && return 0
+    done
+    for pattern in "${EXCLUDE_NAMES[@]}"; do
+        [[ "$(basename "$file")" == $pattern ]] && return 0
+    done
+    return 1
+}
 
-# 1. Add the directory tree structure.
-echo "--- DIRECTORY TREE of $TARGET_DIR ---" > "$OUTPUT_FILE"
-tree "$TARGET_DIR" >> "$OUTPUT_FILE"
-echo -e "\n--- END OF DIRECTORY TREE ---\n" >> "$OUTPUT_FILE"
-
-# 2. Add the content of each file in src/.
-echo "--- CONTENT OF FILES in $TARGET_DIR ---" >> "$OUTPUT_FILE"
-find "$TARGET_DIR" -type f -print0 | while IFS= read -r -d $'\0' file; do
+append_file() {
+    local file="$1"
     echo "--- START: $file ---" >> "$OUTPUT_FILE"
     cat "$file" >> "$OUTPUT_FILE"
     echo -e "\n--- END: $file ---\n" >> "$OUTPUT_FILE"
-done
+}
 
-# 3. Add README.md (if present)
-if [ -f "$README_FILE" ]; then
-    echo "--- START: $README_FILE ---" >> "$OUTPUT_FILE"
-    cat "$README_FILE" >> "$OUTPUT_FILE"
-    echo -e "\n--- END: $README_FILE ---\n" >> "$OUTPUT_FILE"
-fi
+#######################################
+# Snapshot logic (public behavior)
+#######################################
 
-echo "Snapshot complete!"
-echo "The full codebase snapshot has been saved to the file: $OUTPUT_FILE"
+snapshot_tree() {
+    local dir="$1"
+    echo "--- DIRECTORY TREE of $dir ---" >> "$OUTPUT_FILE"
+    tree "$dir" >> "$OUTPUT_FILE"
+    echo -e "\n--- END OF DIRECTORY TREE ---\n" >> "$OUTPUT_FILE"
+}
+
+snapshot_sources() {
+    local dir="$1"
+
+    find "$dir" -type f | sort | while read -r file; do
+        is_excluded "$file" && continue
+        append_file "$file"
+    done
+}
+
+snapshot_root_files() {
+    for file in "${ROOT_FILES[@]}"; do
+        [[ -f "$file" ]] || continue
+        append_file "$file"
+    done
+}
+
+#######################################
+# Entry point
+#######################################
+
+main() {
+    rm -f "$OUTPUT_FILE"
+
+    for dir in "${SOURCE_DIRS[@]}"; do
+        require_exists "$dir"
+    done
+
+    log "Creating codebase snapshot → $OUTPUT_FILE"
+
+    for dir in "${SOURCE_DIRS[@]}"; do
+        snapshot_tree "$dir"
+        snapshot_sources "$dir"
+    done
+
+    snapshot_root_files
+
+    log "Snapshot complete"
+}
+
+main "$@"
