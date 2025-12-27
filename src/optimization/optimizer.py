@@ -12,7 +12,6 @@ Reference:
     - Capital Market Line (Tobin, 1958)
 """
 
-
 from dataclasses import dataclass
 import numpy as np
 import scipy.optimize as sco
@@ -20,7 +19,7 @@ import numpy.typing as npt
 from typing import Dict, Tuple, Optional, List
 
 # Constants
-ZERO_VOL_THRESHOLD = 1e-8      # Numerical zero for volatility checks
+ZERO_VOL_THRESHOLD = 1e-8  # Numerical zero for volatility checks
 MIN_SHARPE_DENOMINATOR = 1e-6  # Minimum volatility for Sharpe calculation
 
 
@@ -60,18 +59,18 @@ class PortfolioOptimizer:
         """Ensures bounds match the number of assets."""
         if bounds is None:
             return [(0.0, 1.0) for _ in range(self.num_assets)]
-        
+
         if len(bounds) != self.num_assets:
             raise ValueError(
                 f"Bounds length ({len(bounds)}) must match number of assets ({self.num_assets})"
             )
-        
+
         return list(bounds)
 
     def calculate_metrics(self, weights: npt.NDArray[np.float64]) -> PortfolioMetrics:
         ret = weights @ self.expected_returns
         vol = np.sqrt(weights @ self.cov_matrix @ weights)
-        
+
         # Determine Sharpe with handling for edge cases
         if vol > MIN_SHARPE_DENOMINATOR:
             sharpe = (ret - self.risk_free_rate) / vol
@@ -95,11 +94,11 @@ class PortfolioOptimizer:
         def objective(weights):
             ret = weights @ self.expected_returns
             vol = np.sqrt(weights @ self.cov_matrix @ weights)
-            
+
             # Handle zero volatility edge case
             if vol < ZERO_VOL_THRESHOLD:
                 return 0.0
-            
+
             # Standard Sharpe ratio: excess return per unit risk
             sharpe = (ret - self.risk_free_rate) / vol
             return -sharpe  # Negative because we minimize
@@ -179,21 +178,21 @@ class PortfolioOptimizer:
                 portfolios.append(self.calculate_metrics(weights))
 
         return portfolios
-    
+
     def allocate_with_cash(
         self,
         tangency_portfolio: PortfolioMetrics,
         target_volatility: float,
-        asset_names: Optional[List[str]] = None
+        asset_names: Optional[List[str]] = None,
     ) -> Dict:
         """
         Allocate between tangency portfolio and cash to achieve target volatility.
-        
+
         Args:
             tangency_portfolio: The optimal risky portfolio (from maximize_sharpe)
             target_volatility: Desired portfolio volatility (e.g., 0.10 for 10%)
             asset_names: Optional list of asset names for the output
-        
+
         Returns:
             Dictionary containing:
                 - 'risky_fraction': fraction invested in risky portfolio
@@ -206,7 +205,7 @@ class PortfolioOptimizer:
         """
         if target_volatility < 0:
             raise ValueError("Target volatility must be non-negative")
-        
+
         # Calculate fraction to invest in risky portfolio
         if tangency_portfolio.volatility > ZERO_VOL_THRESHOLD:
             risky_fraction = target_volatility / tangency_portfolio.volatility
@@ -216,22 +215,22 @@ class PortfolioOptimizer:
         # Cap at 100% (no leverage allowed)
         risky_fraction = min(risky_fraction, 1.0)
         cash_fraction = 1.0 - risky_fraction
-        
+
         # Scale tangency portfolio weights
         final_risky_weights = tangency_portfolio.weights * risky_fraction
-        
+
         # Calculate final portfolio metrics
         final_return = (
-            risky_fraction * tangency_portfolio.return_ + 
-            cash_fraction * self.risk_free_rate
+            risky_fraction * tangency_portfolio.return_
+            + cash_fraction * self.risk_free_rate
         )
         final_volatility = risky_fraction * tangency_portfolio.volatility
-        
+
         if final_volatility > ZERO_VOL_THRESHOLD:
             final_sharpe = (final_return - self.risk_free_rate) / final_volatility
         else:
             final_sharpe = 0.0
-        
+
         # Create allocation table
         allocation_table = {}
         if asset_names:
@@ -240,17 +239,17 @@ class PortfolioOptimizer:
         else:
             for i in range(len(final_risky_weights)):
                 allocation_table[f"Asset_{i}"] = final_risky_weights[i]
-        
+
         allocation_table["CASH"] = cash_fraction
-        
+
         return {
-            'risky_fraction': risky_fraction,
-            'cash_fraction': cash_fraction,
-            'final_weights': np.append(final_risky_weights, cash_fraction),
-            'final_return': final_return,
-            'final_volatility': final_volatility,
-            'final_sharpe': final_sharpe,
-            'allocation_table': allocation_table
+            "risky_fraction": risky_fraction,
+            "cash_fraction": cash_fraction,
+            "final_weights": np.append(final_risky_weights, cash_fraction),
+            "final_return": final_return,
+            "final_volatility": final_volatility,
+            "final_sharpe": final_sharpe,
+            "allocation_table": allocation_table,
         }
 
     def _optimize(
@@ -264,11 +263,11 @@ class PortfolioOptimizer:
         """
         # Start with equal weights, adjusted for bounds
         initial_weights = np.ones(self.num_assets) / self.num_assets
-        
+
         # Adjust if bounds don't allow equal weights
         for i, (low, high) in enumerate(bounds):
             initial_weights[i] = np.clip(initial_weights[i], low, high)
-        
+
         # Renormalize
         if initial_weights.sum() > 0:
             initial_weights = initial_weights / initial_weights.sum()
@@ -302,7 +301,5 @@ def optimize_portfolio(
     risk_free_rate: float = 0.02,
     bounds: Optional[List[Tuple[float, float]]] = None,
 ) -> PortfolioMetrics:
-    optimizer = PortfolioOptimizer(
-        expected_returns, cov_matrix, risk_free_rate
-    )
+    optimizer = PortfolioOptimizer(expected_returns, cov_matrix, risk_free_rate)
     return optimizer.maximize_sharpe(bounds)

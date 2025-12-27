@@ -458,9 +458,6 @@ class TestDegenerateInputs:
         # Either corner solution or mix depending on risk/return tradeoff
 
 
-
-
-
 # ============================================================================
 # Test CAGR Calculations (Domain-Specific)
 # ============================================================================

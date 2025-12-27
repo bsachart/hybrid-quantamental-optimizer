@@ -189,44 +189,13 @@ if st.session_state["prices"] is not None:
     with col_ret1:
         ret_method = st.radio(
             "Return Generation Method",
-            ["View Alpha", "Custom", "Fundamental"],
+            ["Custom", "Fundamental"],
             horizontal=True,
             label_visibility="collapsed",
             index=1,
         )
 
-    if ret_method == "View Alpha":
-        with col_ret2:
-            market_baseline = (
-                st.slider("Market Baseline (%)", 0.0, 20.0, 8.0, 0.5) / 100.0
-            )
-
-        st.info(
-            r"💡 **Logic**: $\mu = \mu_{market} + \delta_{alpha}$. Set Alpha Deltas below."
-        )
-
-        # Specific editor for Alpha
-        alpha_editor = st.data_editor(
-            st.session_state["metrics"][["Alpha Delta (%)", "Constraint"]],
-            column_config={
-                "Constraint": st.column_config.SelectboxColumn(
-                    "Constraint", options=["Long", "Short", "Both"], required=True
-                ),
-                "Alpha Delta (%)": st.column_config.NumberColumn(
-                    "Alpha Delta (%)", format="%.2f"
-                ),
-            },
-            width="stretch",
-            key="alpha_editor",
-        )
-        st.session_state["metrics"].update(alpha_editor)
-
-        expected_returns = calculate_view_returns(
-            market_baseline,
-            st.session_state["metrics"]["Alpha Delta (%)"].values / 100.0,
-        )
-
-    elif ret_method == "Custom":
+    if ret_method == "Custom":
         st.info("💡 **Logic**: Provide raw expected returns below.")
         custom_editor = st.data_editor(
             st.session_state["metrics"][["Custom Return (%)", "Constraint"]],
@@ -270,7 +239,9 @@ if st.session_state["prices"] is not None:
     with col_r2:
         blend_w = st.slider("IV Blending Weight (w)", 0.0, 1.0, 0.5, 0.05)
 
-    st.info(f"Using {blend_w:.0%} Asset Implied Vol / {1-blend_w:.0%} Market Implied Vol (Reference Index: MSCI World, S&P 500...)")
+    st.info(
+        f"Using {blend_w:.0%} Asset Implied Vol / {1-blend_w:.0%} Market Implied Vol (Reference Index: MSCI World, S&P 500...)"
+    )
 
     st.markdown("**Asset-Specific Implied Volatility**")
     st.caption("ℹ️ *Blended Vol is auto-calculated based on Asset IV and Market IV.*")
@@ -333,7 +304,9 @@ if st.session_state["prices"] is not None:
     with col_o3:
         max_short = st.slider("Global Max Short (%)", 0.0, 100.0, 20.0, 0.5) / 100.0
 
-    st.info("🎯 Clicking optimize will generate the Tangency Portfolio and Efficient Frontier.")
+    st.info(
+        "🎯 Clicking optimize will generate the Tangency Portfolio and Efficient Frontier."
+    )
     # Map directional constraints to bounds, applying global caps
     asset_bounds = []
     for constraint in st.session_state["metrics"]["Constraint"]:
@@ -361,13 +334,21 @@ if st.session_state["prices"] is not None:
             with st.spinner("Calculating Efficient Frontier..."):
                 frontier = opt.efficient_frontier(bounds=asset_bounds, num_points=50)
                 frontier_dicts = [
-                    {"return": p.return_, "volatility": p.volatility, "weights": p.weights}
+                    {
+                        "return": p.return_,
+                        "volatility": p.volatility,
+                        "weights": p.weights,
+                    }
                     for p in frontier
                 ]
 
                 random_ps = opt.random_portfolios(num_portfolios=1000)
                 random_dicts = [
-                    {"return": p.return_, "volatility": p.volatility, "weights": p.weights}
+                    {
+                        "return": p.return_,
+                        "volatility": p.volatility,
+                        "weights": p.weights,
+                    }
                     for p in random_ps
                 ]
 
@@ -386,7 +367,7 @@ if st.session_state["prices"] is not None:
                 random_portfolios=random_dicts,
             )
             # Note: st.rerun() not needed - Streamlit reruns automatically on state change
-            
+
     # --- Display Results if Available ---
     opt_results = get_optimization_results()
 
@@ -398,41 +379,40 @@ if st.session_state["prices"] is not None:
         cov_matrix = np.array(opt_results["cov_matrix"])
         rf_rate = opt_results["rf_rate"]
         asset_bounds = opt_results["bounds"]
-        
+
         # Create a temporary PortfolioMetrics object for display
         from src.optimization.optimizer import PortfolioMetrics
+
         tangency = PortfolioMetrics(
             return_=opt_results["tangency_return"],
             volatility=opt_results["tangency_vol"],
             sharpe_ratio=opt_results["tangency_sharpe"],
             weights=tangency_weights,
             success=True,
-            message=""
+            message="",
         )
-        
+
         # Recreate optimizer for cash allocation
         opt = optimizer.PortfolioOptimizer(
             expected_returns=expected_returns,
             cov_matrix=cov_matrix,
             risk_free_rate=rf_rate,
         )
-        
+
         # Display metrics for tangency portfolio
         with st.expander("🎯 Tangency Portfolio (100% Risky Assets)", expanded=False):
             t1, t2, t3 = st.columns(3)
             t1.metric("Expected Return", f"{tangency.return_:.2%}")
             t2.metric("Volatility", f"{tangency.volatility:.2%}")
             t3.metric("Sharpe Ratio", f"{tangency.sharpe_ratio:.2f}")
-            
+
             st.caption("Weights (Risky Assets Only):")
-            tangency_df = pd.DataFrame({
-                "Weight": tangency.weights
-            }, index=tickers)
+            tangency_df = pd.DataFrame({"Weight": tangency.weights}, index=tickers)
             st.dataframe(
                 tangency_df.style.format("{:.2%}").background_gradient(
                     cmap="RdYlGn", subset=["Weight"], vmin=-1.0, vmax=1.0
                 ),
-                width="stretch"
+                width="stretch",
             )
 
         # Prepare cached chart data
@@ -444,35 +424,37 @@ if st.session_state["prices"] is not None:
 
         # Dynamic CML Slider
         max_vol = tangency.volatility
-        
+
         # Default to 15% or max_vol if lower
         default_target = min(0.15, max_vol)
-        
+
         target_volatility = st.slider(
-            "Target Risk (Volatility) on CML", 
-            min_value=0.0, 
-            max_value=float(max_vol), 
+            "Target Risk (Volatility) on CML",
+            min_value=0.0,
+            max_value=float(max_vol),
             value=float(default_target),
             step=0.005,
             format="%.1f%%",
             key="cml_vol_slider",
-            help="Navigate the Capital Market Line: 0% = Risk Free Asset, Max = Tangency Portfolio"
+            help="Navigate the Capital Market Line: 0% = Risk Free Asset, Max = Tangency Portfolio",
         )
-        
+
         # Validate target volatility
-        if target_volatility > tangency.volatility * 1.05: # Allow slight overshoot due to float precision
+        if (
+            target_volatility > tangency.volatility * 1.05
+        ):  # Allow slight overshoot due to float precision
             st.warning(
                 f"⚠️ Target volatility ({target_volatility:.1%}) is higher than the tangency portfolio's volatility ({tangency.volatility:.1%}). "
                 f"This will result in a cash allocation of 0% and the portfolio will be the tangency portfolio."
             )
-        
+
         st.info(f"📊 Target Portfolio Volatility: {target_volatility:.2%}")
 
         # Step 2: Allocate between tangency portfolio and cash
         allocation = opt.allocate_with_cash(
             tangency_portfolio=tangency,
             target_volatility=target_volatility,
-            asset_names=tickers
+            asset_names=tickers,
         )
 
         # Display final portfolio metrics (with cash)
@@ -486,18 +468,17 @@ if st.session_state["prices"] is not None:
         # Prepare data for charts (Using Cached Frontier)
         # frontier and random_ps are already loaded as dicts above
 
-
         opt_dict = {
             "return": tangency.return_,
             "volatility": tangency.volatility,
             "weights": tangency.weights,
             "sharpe": tangency.sharpe_ratio,
         }
-        
+
         target_dict = {
-            "return": allocation['final_return'],
-            "volatility": allocation['final_volatility'],
-            "weights": allocation['final_weights'],
+            "return": allocation["final_return"],
+            "volatility": allocation["final_volatility"],
+            "weights": allocation["final_weights"],
         }
 
         asset_vols = np.sqrt(np.diag(cov_matrix))
@@ -516,46 +497,50 @@ if st.session_state["prices"] is not None:
 
         # Allocation Table (with cash) - Use more efficient approach
         st.subheader("Final Allocation Table")
-        
+
         # Create ticker to index mapping (O(1) lookups)
         ticker_to_idx = {t: i for i, t in enumerate(tickers)}
-        
+
         # Build allocation data efficiently
         alloc_data = [
             {
                 "Asset": "CASH",
-                "Weight": allocation['cash_fraction'],
+                "Weight": allocation["cash_fraction"],
                 "Expected Return": rf_rate,
-                "Volatility": 0.0
+                "Volatility": 0.0,
             }
         ]
-        
+
         # Add risky assets
         for ticker in tickers:
             idx = ticker_to_idx[ticker]
-            weight = allocation['allocation_table'][ticker]
+            weight = allocation["allocation_table"][ticker]
             if abs(weight) > 0.0001:  # Only show non-trivial weights
-                alloc_data.append({
-                    "Asset": ticker,
-                    "Weight": weight,
-                    "Expected Return": expected_returns[idx],
-                    "Volatility": asset_vols[idx]
-                })
-        
+                alloc_data.append(
+                    {
+                        "Asset": ticker,
+                        "Weight": weight,
+                        "Expected Return": expected_returns[idx],
+                        "Volatility": asset_vols[idx],
+                    }
+                )
+
         alloc_df = pd.DataFrame(alloc_data).set_index("Asset")
         alloc_df = alloc_df.sort_values("Weight", ascending=False)
 
         st.dataframe(
-            alloc_df.style.format({
-                "Weight": "{:.2%}",
-                "Expected Return": "{:.2%}",
-                "Volatility": "{:.2%}"
-            }).background_gradient(
+            alloc_df.style.format(
+                {
+                    "Weight": "{:.2%}",
+                    "Expected Return": "{:.2%}",
+                    "Volatility": "{:.2%}",
+                }
+            ).background_gradient(
                 cmap="RdYlGn", subset=["Weight"], vmin=-1.0, vmax=1.0
             ),
-            width="stretch"
+            width="stretch",
         )
-        
+
         st.caption(
             f"💡 **Allocation Strategy**: {allocation['risky_fraction']:.1%} in optimized "
             f"risky portfolio, {allocation['cash_fraction']:.1%} in cash to achieve "

@@ -56,16 +56,18 @@ def load_and_validate_prices(file_path_or_buffer) -> pd.DataFrame:
 
     # NEW: Validate we have numeric data
     df_numeric = df.apply(pd.to_numeric, errors="coerce")
-    
+
     # Check for columns that are entirely NaN (non-numeric)
     all_nan_cols = df_numeric.columns[df_numeric.isna().all()].tolist()
     if all_nan_cols:
         raise ValueError(f"Non-numeric data found in columns: {all_nan_cols}")
-    
+
     # Check for minimum data points
     if len(df_numeric) < 10:
-        raise ValueError("Price history must contain at least 10 data points for meaningful analysis.")
-    
+        raise ValueError(
+            "Price history must contain at least 10 data points for meaningful analysis."
+        )
+
     # Check for too many NaN values
     nan_pct = df_numeric.isna().sum() / len(df_numeric)
     high_nan_cols = nan_pct[nan_pct > 0.2].index.tolist()
@@ -74,7 +76,7 @@ def load_and_validate_prices(file_path_or_buffer) -> pd.DataFrame:
             f"Columns with >20% missing data: {high_nan_cols}. "
             f"Please clean your data or remove these tickers."
         )
-    
+
     return df_numeric.sort_index()
 
 
@@ -125,7 +127,6 @@ def load_and_validate_asset_metrics(file_path_or_buffer) -> pd.DataFrame:
         - Index: Ticker
         - Columns:
             - 'Implied Volatility (%)': percentage (e.g. 30.0)
-            - 'Alpha Delta (%)': percentage (e.g. 2.0)
             - 'Custom Return (%)': percentage (e.g. 8.0)
             - 'Constraint': 'Long', 'Short', or 'Both'
     """
@@ -137,7 +138,6 @@ def load_and_validate_asset_metrics(file_path_or_buffer) -> pd.DataFrame:
     # Required for the core logic if uploaded
     possible_numeric = [
         "Implied Volatility (%)",
-        "Alpha Delta (%)",
         "Custom Return (%)",
     ]
 
@@ -148,7 +148,6 @@ def load_and_validate_asset_metrics(file_path_or_buffer) -> pd.DataFrame:
         # Fallback to legacy names if they exist and convert to %
         legacy_map = {
             "Implied Volatility": "Implied Volatility (%)",
-            "Alpha Delta": "Alpha Delta (%)",
             "Custom Return": "Custom Return (%)",
         }
         found_legacy = False
@@ -172,9 +171,6 @@ def load_and_validate_asset_metrics(file_path_or_buffer) -> pd.DataFrame:
         elif col == "Custom Return (%)":
             # Default if missing but requested by UX
             df[col] = 8.0
-        elif col == "Alpha Delta (%)":
-            # Default to 0.0 if missing (optional now)
-            df[col] = 0.0
 
     # Default constraint to 'Both' if missing
     if "Constraint" not in df.columns:

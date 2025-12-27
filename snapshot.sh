@@ -6,7 +6,7 @@ set -euo pipefail
 #######################################
 
 # Directories to snapshot (relative to project root)
-SOURCE_DIRS=("src")
+SOURCE_DIRS=("src" ".github")
 
 # Root-level files to include
 ROOT_FILES=("README.md")

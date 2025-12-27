@@ -15,7 +15,6 @@ import numpy as np
 
 # Constants
 DEFAULT_CONSTRAINT = "Long"
-DEFAULT_ALPHA_DELTA = 0.0
 DEFAULT_IMPLIED_VOL = 30.0
 DEFAULT_CUSTOM_RETURN = 8.0
 
@@ -32,7 +31,7 @@ def initialize_session_state():
         "price_file_key": None,
         "metrics_file_key": None,
     }
-    
+
     for key, default in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = default
@@ -41,17 +40,16 @@ def initialize_session_state():
 def create_default_metrics(tickers: List[str]) -> pd.DataFrame:
     """
     Create default metrics dataframe for a list of tickers.
-    
+
     Args:
         tickers: List of ticker symbols
-    
+
     Returns:
         DataFrame with default values for all metrics
     """
     return pd.DataFrame(
         {
             "Constraint": [DEFAULT_CONSTRAINT] * len(tickers),
-            "Alpha Delta (%)": [DEFAULT_ALPHA_DELTA] * len(tickers),
             "Implied Volatility (%)": [DEFAULT_IMPLIED_VOL] * len(tickers),
             "Custom Return (%)": [DEFAULT_CUSTOM_RETURN] * len(tickers),
         },
@@ -75,7 +73,7 @@ def save_optimization_results(
 ):
     """
     Save optimization results to session state.
-    
+
     Stores only serializable data, not objects.
     """
     st.session_state["opt_results"] = {
@@ -97,7 +95,7 @@ def save_optimization_results(
 def get_optimization_results() -> Optional[Dict[str, Any]]:
     """
     Safely retrieve optimization results from session state.
-    
+
     Returns:
         Optimization results dict or None if not available
     """
@@ -113,7 +111,7 @@ def clear_optimization_results():
 def should_reoptimize() -> bool:
     """
     Check if optimization should be re-run based on state changes.
-    
+
     This is a placeholder for future enhancement. Currently returns False.
     In a full implementation, you'd track input changes and invalidate results.
     """
