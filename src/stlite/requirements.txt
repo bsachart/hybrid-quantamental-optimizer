@@ -1,11 +1,10 @@
-# Stlite Dependencies (Browser Runtime)
-# These packages are loaded by stlite in the browser via Pyodide
+# Stlite Dependencies (Browser Runtime via Pyodide)
+# Use no version specifiers - let Pyodide pick compatible versions
 
-polars==0.20.3
-pandas==2.1.4
-numpy==1.26.2
-scipy==1.11.4
-altair==5.2.0
+pandas
+numpy
+scipy
+altair
 
 # Note: streamlit is provided by stlite itself
-# No need to list it here
+# Note: polars is NOT compatible with Pyodide

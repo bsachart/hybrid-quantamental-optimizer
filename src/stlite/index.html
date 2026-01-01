@@ -39,11 +39,10 @@
     stlite.mount(
       {
         requirements: [
-          "polars==0.20.3",
-          "pandas==2.1.4",
-          "numpy==1.26.2",
-          "scipy==1.11.4",
-          "altair==5.2.0"
+          "pandas",
+          "numpy",
+          "scipy",
+          "altair"
         ],
         entrypoint: "streamlit_app.py",
         files: {
@@ -54,36 +53,30 @@
 
           // UI Components
           "components/__init__.py": {
-            url: "./components/__init__.py"
-          },
-          "components/uploader.py": {
-            url: "./components/uploader.py"
-          },
-          "components/optimizer_panel.py": {
-            url: "./components/optimizer_panel.py"
+            data: ""
           },
           "components/results_display.py": {
             url: "./components/results_display.py"
           },
 
-          // Engine modules
+          // Engine modules - PANDAS VERSIONS FOR BROWSER
           "src/__init__.py": {
-            url: "../src/__init__.py"
+            data: ""
           },
           "src/engine/__init__.py": {
-            url: "../src/engine/__init__.py"
+            data: ""
           },
-          "src/engine/data_loader.py": {
-            url: "../src/engine/data_loader.py"
+          "src/engine/data_loader_pandas.py": {
+            url: "../engine/data_loader_pandas.py"
           },
-          "src/engine/portfolio_engine.py": {
-            url: "../src/engine/portfolio_engine.py"
+          "src/engine/portfolio_engine_pandas.py": {
+            url: "../engine/portfolio_engine_pandas.py"
           },
           "src/engine/optimizer.py": {
-            url: "../src/engine/optimizer.py"
+            url: "../engine/optimizer.py"
           },
-          "src/engine/risk.py": {
-            url: "../src/engine/risk.py"
+          "src/engine/risk_pandas.py": {
+            url: "../engine/risk_pandas.py"
           }
         }
       },

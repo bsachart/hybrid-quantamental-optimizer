@@ -1,5 +1,5 @@
 """
-Portfolio Engine - High-level orchestration for portfolio construction.
+Portfolio Engine - Pandas version for browser deployment.
 
 Philosophy:
     - Deep Module: Simple public API hiding complex data loading and math.
@@ -11,9 +11,22 @@ Philosophy:
 import numpy as np
 from typing import Union, List, Optional, cast
 
-from src.engine.data_loader import load_universe, FileInput
-from src.engine.risk import calculate_covariance, RiskModel
-from src.engine.optimizer import find_tangency_portfolio, LabeledPortfolioMetrics
+from src.engine.data_loader_pandas import load_universe, FileInput
+from src.engine.risk_pandas import calculate_covariance, RiskModel
+
+# FIX: Import only PortfolioMetrics (base), not LabeledPortfolioMetrics
+from src.engine.optimizer import find_tangency_portfolio, PortfolioMetrics
+
+
+# FIX: Define LabeledPortfolioMetrics here (Domain Concern), not in the Optimizer (Math Concern).
+class LabeledPortfolioMetrics(PortfolioMetrics):
+    """
+    Extends standard metrics to include universe context (tickers, stats).
+    """
+
+    tickers: List[str]
+    asset_returns: List[float]
+    asset_vols: List[float]
 
 
 def optimize_portfolio(
@@ -29,8 +42,8 @@ def optimize_portfolio(
     and extracts universe statistics in a single pass.
 
     Args:
-        price_source: Path to CSV or Polars DataFrame (Prices).
-        metric_source: Path to CSV or Polars DataFrame (Metrics).
+        price_source: Path to CSV or Pandas DataFrame (Prices).
+        metric_source: Path to CSV or Pandas DataFrame (Metrics).
         risk_model: RiskModel.HISTORICAL or RiskModel.FORWARD_LOOKING.
         risk_free_rate: Risk-free rate (decimal, e.g. 0.04) for Sharpe calculation.
         annualization_factor: Required only if risk_model is HISTORICAL.
@@ -43,18 +56,18 @@ def optimize_portfolio(
     tickers = universe.tickers
 
     # 2. Extract Optimization Inputs
-    expected_returns = universe.metrics["expected_return"].to_numpy()
+    expected_returns = universe.metrics["expected_return"].values
     bounds = list(
         zip(
-            universe.metrics["min_weight"].to_numpy(),
-            universe.metrics["max_weight"].to_numpy(),
+            universe.metrics["min_weight"].values,
+            universe.metrics["max_weight"].values,
         )
     )
 
     # 3. Calculate Risk (Covariance)
     implied_vols = None
     if risk_model == RiskModel.FORWARD_LOOKING:
-        implied_vols = universe.metrics["implied_volatility"].to_numpy()
+        implied_vols = universe.metrics["implied_volatility"].values
 
     cov_matrix = calculate_covariance(
         prices=universe.prices,
@@ -72,15 +85,20 @@ def optimize_portfolio(
     )
 
     # 5. Extract Universe Statistics (for UI Visualization)
-    # We calculate asset volatility from the diagonal of the covariance matrix
-    # to ensure consistency with the selected risk model.
     asset_vols = np.sqrt(np.diag(cov_matrix))
 
     # 6. Inject Labels and Context
-    result = cast(LabeledPortfolioMetrics, raw_metrics)
-    result["tickers"] = tickers
-    result["asset_returns"] = expected_returns.tolist()
-    result["asset_vols"] = asset_vols.tolist()
+    # We create a new dict that satisfies LabeledPortfolioMetrics
+    result: LabeledPortfolioMetrics = {
+        "weights": raw_metrics["weights"],
+        "expected_return": raw_metrics["expected_return"],
+        "volatility": raw_metrics["volatility"],
+        "sharpe_ratio": raw_metrics["sharpe_ratio"],
+        "cash_weight": raw_metrics["cash_weight"],
+        "tickers": tickers,
+        "asset_returns": expected_returns.tolist(),
+        "asset_vols": asset_vols.tolist(),
+    }
 
     return result
 
@@ -105,13 +123,11 @@ def target_portfolio(
     # --- Single Target Logic ---
     t_vol = tangency_portfolio["volatility"]
 
-    # Edge case: If tangency has 0 vol, we can't scale it. Return 100% Cash.
+    # Edge case: If tangency has 0 vol, return 100% Cash
     if t_vol < 1e-8:
         return _create_cash_portfolio(tangency_portfolio, risk_free_rate)
 
-    # Calculate Allocation Ratio
-    # ratio = Desired Risk / Tangency Risk
-    # Cap at 1.0 (No Leverage)
+    # Calculate Allocation Ratio (capped at 1.0 = no leverage)
     ratio = min(cast(float, target_volatility) / t_vol, 1.0)
 
     # Calculate New Weights
@@ -119,17 +135,14 @@ def target_portfolio(
     new_weights = tangency_portfolio["weights"] * ratio
 
     # Calculate New Metrics
-    # E[R_p] = w * E[R_t] + (1-w) * R_f
     new_ret = (tangency_portfolio["expected_return"] * ratio) + (
         risk_free_rate * cash_weight
     )
     new_vol = t_vol * ratio
 
-    # Sharpe remains constant along the CML (unless capped)
+    # Sharpe remains constant along the CML
     new_sharpe = tangency_portfolio["sharpe_ratio"]
-    if ratio >= 1.0:
-        pass
-    elif new_vol > 1e-8:
+    if ratio < 1.0 and new_vol > 1e-8:
         new_sharpe = (new_ret - risk_free_rate) / new_vol
 
     return {
@@ -152,15 +165,7 @@ def generate_cml(
     num_points: Optional[int] = None,
 ) -> List[LabeledPortfolioMetrics]:
     """
-    Generates a series of portfolios along the Capital Market Line.
-    Range: From Risk-Free Asset (Vol=0) to Tangency Portfolio (Vol=Max).
-
-    Args:
-        tangency_portfolio: The max-sharpe portfolio.
-        risk_free_rate: The return when volatility is 0.
-        vol_step: Fixed step size for volatility (default 0.01 for 1%).
-        num_points: Optional. If provided, overrides vol_step to generate
-                    N evenly spaced points.
+    Generate portfolios along the Capital Market Line.
     """
     max_vol = tangency_portfolio["volatility"]
 
@@ -170,10 +175,8 @@ def generate_cml(
         if vol_step <= 0:
             raise ValueError("vol_step must be positive")
 
-        # Generate range [0, vol_step, 2*vol_step, ... < max_vol]
         targets = np.arange(0, max_vol, vol_step).tolist()
 
-        # Ensure we always include the exact Tangency Point at the end
         if not targets or not np.isclose(targets[-1], max_vol):
             targets.append(max_vol)
 

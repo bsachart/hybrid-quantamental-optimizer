@@ -12,6 +12,8 @@ from typing import TypedDict, List, Tuple, Optional
 
 
 class PortfolioMetrics(TypedDict):
+    """Base metrics for any portfolio."""
+
     weights: np.ndarray
     expected_return: float
     volatility: float
