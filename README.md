@@ -6,6 +6,20 @@ A portfolio construction engine that fixes the "rear-view mirror" bias of tradit
 
 ---
 
+## 🌐 Try It Online
+
+**Live Web Interface**: [https://bsachart.github.io/hybrid-quantamental-optimizer/](https://bsachart.github.io/hybrid-quantamental-optimizer/)
+
+Use the web interface to:
+- Upload your price history and asset metrics CSVs
+- Configure optimization parameters interactively
+- Visualize the Efficient Frontier and Capital Market Line
+- Explore different risk/return allocations with real-time updates
+
+*No installation required - runs entirely in your browser using Stlite (Streamlit + WebAssembly).*
+
+---
+
 ## 1. Project Overview
 
 Traditional MPT relies on historical returns to predict the future. This is fundamentally backward-looking and fails during regime changes.
@@ -18,14 +32,20 @@ Traditional MPT relies on historical returns to predict the future. This is fund
     - **Stage 1**: Solve for the Tangency Portfolio (Pure Equity).
     - **Stage 2**: Construct the final portfolio along the Capital Market Line (Cash Mixing).
 
-**Web Interface**: A graphical interface for this engine is available at: [LINK_PLACEHOLDER].
-Use this interface to perform **Step 2 (Optimization)** visually, explore the Efficient Frontier interactively, and analyze risk calibration without writing code.
-
 ---
 
 ## 2. Quick Start
 
-### Step 1: Generate Data
+### Option A: Use the Web Interface (Recommended for exploration)
+
+1. Visit [https://bsachart.github.io/hybrid-quantamental-optimizer/](https://bsachart.github.io/hybrid-quantamental-optimizer/)
+2. Upload your data files (see [Data Specifications](#3-data-specifications))
+3. Configure optimization parameters
+4. View results and explore allocations
+
+### Option B: Python API (For programmatic use)
+
+#### Step 1: Generate Data
 
 Fetch historical prices and compute fundamental metrics using the provided utility:
 
@@ -33,7 +53,7 @@ Fetch historical prices and compute fundamental metrics using the provided utili
 python src/scripts/generate_universe.py
 ```
 
-### Step 2: Run Optimization
+#### Step 2: Run Optimization
 
 A single function call orchestrates data loading, alignment, risk modeling, and solving.
 
