@@ -13,7 +13,18 @@ from typing import Union, List, Optional, cast
 
 from src.engine.data_loader import load_universe, FileInput
 from src.engine.risk import calculate_covariance, RiskModel
-from src.engine.optimizer import find_tangency_portfolio, LabeledPortfolioMetrics
+from src.engine.optimizer import find_tangency_portfolio, PortfolioMetrics
+
+
+# Define LabeledPortfolioMetrics here (Domain Concern), not in the Optimizer (Math Concern).
+class LabeledPortfolioMetrics(PortfolioMetrics):
+    """
+    Extends standard metrics to include universe context (tickers, stats).
+    """
+
+    tickers: List[str]
+    asset_returns: List[float]
+    asset_vols: List[float]
 
 
 def optimize_portfolio(
