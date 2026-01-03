@@ -38,6 +38,16 @@ def render_results(
         f"{cash_pct:.1f}% in cash to achieve {_safe_float(final_portfolio.get('volatility')):.1%} target volatility."
     )
 
+    # Download Results Button
+    csv_data = _create_results_csv(final_portfolio, tangency)
+    st.download_button(
+        label="📥 Download Results (CSV)",
+        data=csv_data,
+        file_name="portfolio_optimization_results.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
 
 def _safe_float(val: Any) -> float:
     """Convert to native Python float, defaulting to 0.0 on error."""
@@ -308,3 +318,60 @@ def _create_allocation_df(
     if not df.empty:
         df = df.sort_values("Weight", ascending=False, key=abs)
     return df
+
+
+def _create_results_csv(final_portfolio: Dict, tangency: Dict) -> str:
+    """Generate a CSV summary of optimization results."""
+    import io
+    import csv
+
+    tickers = tangency.get("tickers", [])
+    rows = []
+
+    # Header info
+    rows.append(["Optimization Results"])
+    rows.append(
+        ["Target Volatility", f"{_safe_float(final_portfolio.get('volatility')):.2%}"]
+    )
+    rows.append([])
+
+    # Portfolio metrics
+    rows.append(["Portfolio Metrics"])
+    rows.append(
+        [
+            "Expected Return",
+            f"{_safe_float(final_portfolio.get('expected_return')):.2%}",
+        ]
+    )
+    rows.append(["Volatility", f"{_safe_float(final_portfolio.get('volatility')):.2%}"])
+    rows.append(
+        ["Sharpe Ratio", f"{_safe_float(final_portfolio.get('sharpe_ratio')):.2f}"]
+    )
+    rows.append(
+        ["Cash Weight", f"{_safe_float(final_portfolio.get('cash_weight')):.2%}"]
+    )
+    rows.append([])
+
+    # Allocations
+    rows.append(["Asset", "Weight", "Expected Return", "Volatility"])
+
+    cash_w = _safe_float(final_portfolio.get("cash_weight"))
+    if cash_w > 0.0001:
+        rows.append(["CASH", f"{cash_w:.4f}", "0.0000", "0.0000"])
+
+    weights = final_portfolio.get("weights", [])
+    asset_returns = tangency.get("asset_returns", [])
+    asset_vols = tangency.get("asset_vols", [])
+
+    for i, ticker in enumerate(tickers):
+        w = _safe_float(weights[i]) if i < len(weights) else 0.0
+        if abs(w) > 0.0001:
+            ret = _safe_float(asset_returns[i]) if i < len(asset_returns) else 0.0
+            vol = _safe_float(asset_vols[i]) if i < len(asset_vols) else 0.0
+            rows.append([ticker, f"{w:.4f}", f"{ret:.4f}", f"{vol:.4f}"])
+
+    # Convert to CSV string
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerows(rows)
+    return output.getvalue()
