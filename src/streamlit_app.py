@@ -20,56 +20,83 @@ def _inject_styles() -> None:
     st.markdown(
         """
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Gelasio:wght@500;600;700&family=Urbanist:wght@400;500;600;700&display=swap');
+
     :root {
-        --bg: #f3ecdf;
-        --bg-glow: #efe2ce;
-        --panel: rgba(255, 250, 242, 0.9);
-        --panel-strong: rgba(255, 248, 238, 0.98);
+        --bg: #f7f4ee;
+        --bg-alt: #f1ece3;
+        --panel: rgba(255, 255, 252, 0.92);
+        --panel-strong: rgba(255, 255, 252, 0.98);
         --ink: #22252b;
-        --muted: #6e6a63;
+        --muted: #625d56;
         --accent: #166c59;
-        --accent-soft: #dbe9e3;
+        --accent-soft: #deebe5;
         --signal: #c76b3f;
-        --line: rgba(34, 37, 43, 0.12);
-        --shadow: 0 18px 60px rgba(91, 70, 42, 0.09);
+        --line: rgba(34, 37, 43, 0.10);
+        --shadow: 0 18px 48px rgba(91, 70, 42, 0.08);
     }
 
     .stApp {
-        background:
-            radial-gradient(circle at top left, rgba(199, 107, 63, 0.10), transparent 30%),
-            radial-gradient(circle at top right, rgba(22, 108, 89, 0.12), transparent 28%),
-            linear-gradient(180deg, var(--bg-glow) 0%, var(--bg) 36%, #f7f1e6 100%);
+        background: linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 18%, #fbf9f5 100%);
         color: var(--ink);
-        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        font-family: "Urbanist", "Segoe UI", sans-serif;
+        font-optical-sizing: auto;
+    }
+
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] * {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
+        font-optical-sizing: auto;
+    }
+
+    .material-icons,
+    .material-icons-round,
+    .material-icons-sharp,
+    .material-icons-outlined,
+    .material-symbols-rounded,
+    .material-symbols-outlined,
+    .material-symbols-sharp {
+        font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+        font-weight: normal;
+        font-style: normal;
+        letter-spacing: normal;
+        text-transform: none;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-smoothing: antialiased;
     }
 
     [data-testid="stHeader"] {
-        background: rgba(243, 236, 223, 0.72);
+        background: rgba(247, 244, 238, 0.88);
         backdrop-filter: blur(10px);
     }
 
     [data-testid="stMainBlockContainer"] {
-        max-width: 1240px;
-        padding-top: 2.4rem;
+        max-width: 1600px;
+        padding-top: 2.1rem;
         padding-bottom: 4rem;
     }
 
-    h1, h2, h3 {
-        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-        letter-spacing: -0.03em;
+    h1, h2, h3,
+    .hero-title,
+    .brief-title,
+    .section-title {
+        font-family: "Gelasio", "Georgia", serif;
+        letter-spacing: -0.02em;
         color: var(--ink);
     }
 
     .hero-shell {
-        background: linear-gradient(145deg, rgba(255, 250, 242, 0.96), rgba(247, 239, 227, 0.90));
-        border: 1px solid rgba(34, 37, 43, 0.08);
-        border-radius: 32px;
+        background: var(--panel-strong);
+        border: 1px solid rgba(34, 37, 43, 0.10);
+        border-radius: 22px;
         box-shadow: var(--shadow);
-        padding: 2rem 2.2rem;
+        padding: 2.1rem 2.2rem;
         min-height: 100%;
     }
 
     .eyebrow {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
         color: var(--signal);
         font-size: 0.82rem;
         font-weight: 700;
@@ -79,17 +106,19 @@ def _inject_styles() -> None:
     }
 
     .hero-title {
-        font-size: clamp(2.7rem, 5vw, 4.6rem);
-        line-height: 0.94;
+        font-size: clamp(3rem, 4.5vw, 4.6rem);
+        line-height: 1.02;
         margin: 0;
-        max-width: 9ch;
+        max-width: 15ch;
+        text-wrap: balance;
     }
 
     .hero-copy {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
         color: var(--muted);
-        font-size: 1.05rem;
-        line-height: 1.65;
-        max-width: 52ch;
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: 48ch;
         margin-top: 1rem;
     }
 
@@ -101,19 +130,20 @@ def _inject_styles() -> None:
     }
 
     .badge {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
         border-radius: 999px;
         background: rgba(22, 108, 89, 0.10);
         color: var(--accent);
         border: 1px solid rgba(22, 108, 89, 0.14);
-        font-size: 0.88rem;
+        font-size: 0.84rem;
         font-weight: 600;
-        padding: 0.45rem 0.85rem;
+        padding: 0.4rem 0.8rem;
     }
 
     .brief-card {
-        background: linear-gradient(180deg, rgba(255, 248, 238, 0.98), rgba(247, 239, 227, 0.92));
-        border: 1px solid rgba(34, 37, 43, 0.08);
-        border-radius: 28px;
+        background: var(--panel);
+        border: 1px solid rgba(34, 37, 43, 0.10);
+        border-radius: 22px;
         box-shadow: var(--shadow);
         padding: 1.65rem 1.6rem;
         min-height: 100%;
@@ -121,8 +151,8 @@ def _inject_styles() -> None:
 
     .brief-title {
         color: var(--ink);
-        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-        font-size: 1.35rem;
+        font-family: "Gelasio", "Georgia", serif;
+        font-size: 1.3rem;
         margin-bottom: 1rem;
     }
 
@@ -140,6 +170,7 @@ def _inject_styles() -> None:
     }
 
     .brief-line span {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
         color: var(--muted);
         font-size: 0.92rem;
         line-height: 1.55;
@@ -150,6 +181,7 @@ def _inject_styles() -> None:
     }
 
     .section-kicker {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
         color: var(--signal);
         text-transform: uppercase;
         letter-spacing: 0.14em;
@@ -159,12 +191,13 @@ def _inject_styles() -> None:
     }
 
     .section-title {
-        font-size: 2rem;
-        line-height: 1.04;
+        font-size: 1.8rem;
+        line-height: 1.1;
         margin-bottom: 0.45rem;
     }
 
     .section-copy {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
         color: var(--muted);
         line-height: 1.65;
         max-width: 60ch;
@@ -172,17 +205,44 @@ def _inject_styles() -> None:
     }
 
     .field-note, .status-note {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
         color: var(--muted);
         font-size: 0.92rem;
         line-height: 1.55;
     }
 
-    .signal-card {
+    .panel-card, [data-testid="stVerticalBlockBorderWrapper"] {
         background: var(--panel);
-        border-radius: 24px;
-        border: 1px solid rgba(34, 37, 43, 0.08);
+        border-radius: 20px;
+        border: 1px solid rgba(34, 37, 43, 0.10);
         box-shadow: var(--shadow);
-        padding: 1.35rem 1.45rem;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 0.95rem 1rem 1.05rem;
+    }
+
+    .panel-title {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 0.2rem;
+    }
+
+    .panel-copy {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.55;
+        margin-bottom: 0.95rem;
+    }
+
+    .signal-card {
+        background: rgba(22, 108, 89, 0.06);
+        border-radius: 18px;
+        border: 1px solid rgba(22, 108, 89, 0.12);
+        padding: 1rem 1.05rem;
     }
 
     .signal-card strong {
@@ -193,23 +253,24 @@ def _inject_styles() -> None:
     }
 
     .signal-card span {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
         color: var(--muted);
         font-size: 0.92rem;
         line-height: 1.55;
     }
 
     div[data-testid="stFileUploaderDropzone"] {
-        background: rgba(255, 250, 242, 0.86);
+        background: rgba(249, 247, 242, 0.88);
         border: 1.5px dashed rgba(22, 108, 89, 0.30);
-        border-radius: 24px;
+        border-radius: 18px;
         padding-top: 1rem;
         padding-bottom: 1rem;
     }
 
     div[data-testid="stExpander"] {
-        background: rgba(255, 250, 242, 0.78);
+        background: rgba(249, 247, 242, 0.82);
         border: 1px solid rgba(34, 37, 43, 0.09);
-        border-radius: 18px;
+        border-radius: 14px;
         overflow: hidden;
     }
 
@@ -225,16 +286,15 @@ def _inject_styles() -> None:
     }
 
     div[data-baseweb="select"] > div {
-        border-radius: 16px;
+        border-radius: 14px;
         border-color: rgba(34, 37, 43, 0.12);
-        background: rgba(255, 250, 242, 0.82);
+        background: rgba(249, 247, 242, 0.88);
     }
 
     div[data-testid="stMetric"] {
-        background: rgba(255, 250, 242, 0.92);
+        background: rgba(255, 255, 252, 0.92);
         border: 1px solid rgba(34, 37, 43, 0.08);
-        border-radius: 22px;
-        box-shadow: var(--shadow);
+        border-radius: 18px;
         padding: 0.95rem 1rem;
     }
 
@@ -244,16 +304,44 @@ def _inject_styles() -> None:
         padding: 0;
     }
 
-    div[data-testid="metric-container"] label {
+    div[data-testid="metric-container"] label,
+    div[data-testid="metric-container"] [data-testid="stMetricLabel"],
+    div[data-testid="metric-container"] [data-testid="stMetricLabel"] * {
         color: var(--muted);
         text-transform: uppercase;
         letter-spacing: 0.08em;
         font-size: 0.72rem;
     }
 
-    div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    div[data-testid="metric-container"] [data-testid="stMetricValue"],
+    div[data-testid="metric-container"] [data-testid="stMetricValue"] *,
+    div[data-testid="stMetricValue"],
+    div[data-testid="stMetricValue"] * {
         color: var(--ink);
-        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+        font-family: "Gelasio", "Georgia", serif;
+    }
+
+    div[data-testid="stMetricValue"] {
+        font-size: 2rem;
+    }
+
+    div[data-testid="stMetricDelta"],
+    div[data-testid="stMetricDelta"] * {
+        color: var(--muted);
+    }
+
+    div[data-testid="stCaptionContainer"] {
+        color: var(--muted);
+    }
+
+    .results-grid {
+        margin-top: 0.4rem;
+    }
+
+    .results-divider {
+        height: 1px;
+        background: var(--line);
+        margin: 1.1rem 0 1.4rem;
     }
 
     button[kind="primary"] {
@@ -286,6 +374,12 @@ def _inject_styles() -> None:
         text-decoration: none;
         font-weight: 700;
     }
+
+    @media (max-width: 1100px) {
+        .hero-title {
+            max-width: 14ch;
+        }
+    }
 </style>
         """,
         unsafe_allow_html=True,
@@ -293,23 +387,23 @@ def _inject_styles() -> None:
 
 
 def _render_hero() -> None:
-    hero_col, brief_col = st.columns([1.8, 1], gap="large")
+    hero_col, brief_col = st.columns([1.6, 1], gap="medium")
 
     with hero_col:
         st.markdown(
             """
             <div class="hero-shell">
-                <div class="eyebrow">Forward-Looking Portfolio Construction</div>
+                <div class="eyebrow">Portfolio Construction</div>
                 <h1 class="hero-title">Hybrid Quantamental Optimizer</h1>
                 <div class="hero-copy">
-                    Build an allocation from forecast return assumptions,
-                    forward-looking volatility, and a deliberate capital-market-line
-                    decision instead of relying on a purely backward-looking portfolio.
+                    Build a portfolio from return assumptions, volatility inputs,
+                    and a target risk level. Upload the market data, solve the risky
+                    mix, then decide how much to hold in cash.
                 </div>
                 <div class="badge-row">
-                    <span class="badge">Expected return engine</span>
-                    <span class="badge">Forward volatility input</span>
-                    <span class="badge">Cash-mix targeting</span>
+                    <span class="badge">Expected returns</span>
+                    <span class="badge">Forward volatility</span>
+                    <span class="badge">Cash allocation</span>
                 </div>
             </div>
             """,
@@ -320,21 +414,21 @@ def _render_hero() -> None:
         st.markdown(
             """
             <div class="brief-card">
-                <div class="brief-title">What this workflow does</div>
+                <div class="brief-title">How it works</div>
                 <div class="brief-line">
-                    <strong>1. Align the universe</strong>
-                    <span>Load price history and asset assumptions into one clean
-                    optimization set.</span>
+                    <strong>1. Load the universe</strong>
+                    <span>Bring in price history and one metrics file with return,
+                    volatility, and weight bounds.</span>
                 </div>
                 <div class="brief-line">
                     <strong>2. Solve the risky mix</strong>
-                    <span>Find the tangency portfolio under your chosen risk model
-                    and weight bounds.</span>
+                    <span>Find the tangency portfolio for the chosen risk model
+                    and constraints.</span>
                 </div>
                 <div class="brief-line">
-                    <strong>3. Choose the final risk posture</strong>
-                    <span>Dial the target volatility and let the app blend risky
-                    assets with cash.</span>
+                    <strong>3. Set target risk</strong>
+                    <span>Choose the final volatility target and let the app blend
+                    risky assets with cash.</span>
                 </div>
             </div>
             """,
@@ -367,10 +461,20 @@ def _render_signal_card(title: str, body: str) -> None:
     )
 
 
+def _render_panel_intro(title: str, body: str) -> None:
+    st.markdown(
+        f"""
+        <div class="panel-title">{escape(title)}</div>
+        <div class="panel-copy">{escape(body)}</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _risk_model_note(risk_model: RiskModel) -> str:
     if risk_model == RiskModel.HISTORICAL:
         return "Historical mode annualizes sample covariance using 252 trading days."
-    return "Forward-looking mode keeps historical correlation structure and swaps in implied volatility."
+    return "Forward-looking mode keeps the correlation structure from history and uses implied volatility as the risk input."
 
 
 def _fmt_pct(value: float) -> str:
@@ -399,121 +503,132 @@ _render_hero()
 
 _render_section(
     "Inputs",
-    "Assemble the market packet",
-    "Upload one time-series file for price history and one cross-sectional file for expected return, volatility, and allocation bounds.",
+    "Upload inputs",
+    "Add a price history file and a metrics file with expected return, volatility, and optional weight bounds.",
 )
 
-prices_col, metrics_col = st.columns(2, gap="large")
+prices_col, metrics_col = st.columns(2, gap="medium")
 
 with prices_col:
-    st.markdown("**Price history**")
-    st.markdown(
-        "<div class='field-note'>One <code>date</code> column followed by one column per ticker.</div>",
-        unsafe_allow_html=True,
-    )
-    with st.expander("Preview expected format", expanded=False):
-        st.code(
-            """date,AAPL,GOOG,MSFT
+    with st.container(border=True):
+        _render_panel_intro(
+            "Price history",
+            "Use one date column followed by one column per ticker.",
+        )
+        if st.toggle("Show sample format", key="show_price_sample"):
+            st.code(
+                """date,AAPL,GOOG,MSFT
 2023-01-31,150.23,105.44,280.50
 2023-02-28,152.11,108.22,285.33""",
-            language="csv",
+                language="csv",
+            )
+        prices_file = st.file_uploader(
+            "Upload prices.csv",
+            type=["csv"],
+            key="prices_upload",
+            label_visibility="collapsed",
         )
-    prices_file = st.file_uploader(
-        "Upload prices.csv",
-        type=["csv"],
-        key="prices_upload",
-        label_visibility="collapsed",
-    )
-    if prices_file is not None:
-        _render_signal_card(
-            "Loaded price history",
-            f"{prices_file.name} is ready for alignment and covariance construction.",
-        )
+        if prices_file is not None:
+            _render_signal_card(
+                "Price file loaded",
+                f"{prices_file.name} is ready for covariance construction.",
+            )
 
 with metrics_col:
-    st.markdown("**Asset metrics**")
-    st.markdown(
-        "<div class='field-note'>Include <code>ticker</code>, <code>expected_return</code>, <code>implied_volatility</code>, and optional weight bounds.</div>",
-        unsafe_allow_html=True,
-    )
-    with st.expander("Preview expected format", expanded=False):
-        st.code(
-            """ticker,expected_return,implied_volatility,min_weight,max_weight
+    with st.container(border=True):
+        _render_panel_intro(
+            "Asset metrics",
+            "Include ticker, expected return, implied volatility, and optional weight bounds.",
+        )
+        if st.toggle("Show sample format", key="show_metrics_sample"):
+            st.code(
+                """ticker,expected_return,implied_volatility,min_weight,max_weight
 AAPL,0.12,0.25,0.0,1.0
 GOOG,0.15,0.28,0.0,1.0""",
-            language="csv",
+                language="csv",
+            )
+        metrics_file = st.file_uploader(
+            "Upload metrics.csv",
+            type=["csv"],
+            key="metrics_upload",
+            label_visibility="collapsed",
         )
-    metrics_file = st.file_uploader(
-        "Upload metrics.csv",
-        type=["csv"],
-        key="metrics_upload",
-        label_visibility="collapsed",
-    )
-    if metrics_file is not None:
-        _render_signal_card(
-            "Loaded asset assumptions",
-            f"{metrics_file.name} is ready for expected return, volatility, and weight constraints.",
-        )
+        if metrics_file is not None:
+            _render_signal_card(
+                "Metrics file loaded",
+                f"{metrics_file.name} is ready for return, volatility, and bounds.",
+            )
 
 files_ready = prices_file is not None and metrics_file is not None
 
 _render_section(
     "Model setup",
-    "Set the optimization stance",
-    "Choose the risk-free rate, decide how covariance should be built, and then solve for the risky mix.",
+    "Choose assumptions",
+    "Set the risk-free rate, pick the risk model, and solve for the tangency portfolio.",
 )
 
-controls_col, status_col = st.columns([1.7, 1], gap="large")
+controls_col, status_col = st.columns([1.45, 0.9], gap="medium")
 
 with controls_col:
-    control_a, control_b = st.columns(2, gap="large")
-    with control_a:
-        risk_free_rate = (
-            st.slider(
-                "Risk-free rate (%)",
-                min_value=0.0,
-                max_value=10.0,
-                value=4.0,
-                step=0.25,
-                format="%.2f%%",
+    with st.container(border=True):
+        _render_panel_intro(
+            "Optimization inputs",
+            "These settings drive the tangency portfolio before any cash mix is applied.",
+        )
+        control_a, control_b = st.columns(2, gap="large")
+        with control_a:
+            risk_free_rate = (
+                st.slider(
+                    "Risk-free rate (%)",
+                    min_value=0.0,
+                    max_value=10.0,
+                    value=4.0,
+                    step=0.25,
+                    format="%.2f%%",
+                    disabled=not files_ready,
+                )
+                / 100.0
+            )
+
+        with control_b:
+            risk_model_label = st.radio(
+                "Risk model",
+                ["Forward-Looking", "Historical"],
+                index=0,
+                horizontal=True,
                 disabled=not files_ready,
             )
-            / 100.0
-        )
+            risk_model = (
+                RiskModel.FORWARD_LOOKING
+                if risk_model_label == "Forward-Looking"
+                else RiskModel.HISTORICAL
+            )
 
-    with control_b:
-        risk_model_label = st.radio(
-            "Risk model",
-            ["Forward-Looking", "Historical"],
-            index=0,
-            horizontal=True,
+        st.caption(_risk_model_note(risk_model))
+        optimize_button = st.button(
+            "Solve portfolio",
+            type="primary",
+            use_container_width=True,
             disabled=not files_ready,
         )
-        risk_model = (
-            RiskModel.FORWARD_LOOKING
-            if risk_model_label == "Forward-Looking"
-            else RiskModel.HISTORICAL
-        )
-
-    st.caption(_risk_model_note(risk_model))
-    optimize_button = st.button(
-        "Solve portfolio",
-        type="primary",
-        use_container_width=True,
-        disabled=not files_ready,
-    )
 
 with status_col:
-    if files_ready:
-        _render_signal_card(
-            "Ready to solve",
-            f"Using {prices_file.name} with {metrics_file.name}. The current rate assumption is {_fmt_pct(risk_free_rate)}.",
-        )
-    else:
-        _render_signal_card(
-            "Waiting for both files",
-            "Upload both the price history and the asset metrics packet to unlock optimization controls.",
-        )
+    with st.container(border=True):
+        if files_ready:
+            _render_panel_intro("Ready", "Both files are loaded and the model can be solved.")
+            _render_signal_card(
+                "Current run",
+                f"{prices_file.name} + {metrics_file.name} with a risk-free rate of {_fmt_pct(risk_free_rate)}.",
+            )
+        else:
+            _render_panel_intro(
+                "Waiting for files",
+                "Load both CSV files to enable the optimization controls.",
+            )
+            _render_signal_card(
+                "Needed to continue",
+                "Add one price history CSV and one asset metrics CSV.",
+            )
 
 if optimize_button:
     with st.spinner("Solving portfolio and generating the capital market line..."):
@@ -553,32 +668,40 @@ if st.session_state.optimization_complete and st.session_state.tangency_portfoli
 
     _render_section(
         "Results",
-        "Read the portfolio story",
-        "Start with the risky tangency mix, then decide how much cash to blend in by dialing the target volatility.",
+        "Results",
+        "Review the tangency portfolio, then adjust the target volatility to decide the final cash mix.",
     )
 
-    headline_a, headline_b, headline_c = st.columns(3, gap="large")
-    with headline_a:
-        st.metric("Tangency return", _fmt_pct(float(tangency["expected_return"])))
-    with headline_b:
-        st.metric("Tangency volatility", _fmt_pct(float(tangency["volatility"])))
-    with headline_c:
-        st.metric("Tangency Sharpe", f"{float(tangency['sharpe_ratio']):.2f}")
+    with st.container(border=True):
+        st.markdown(
+            "<div class='panel-title'>Tangency portfolio</div><div class='panel-copy'>This is the highest-Sharpe risky portfolio before any cash is blended in.</div>",
+            unsafe_allow_html=True,
+        )
+        headline_a, headline_b, headline_c = st.columns(3, gap="large")
+        with headline_a:
+            st.metric("Expected return", _fmt_pct(float(tangency["expected_return"])))
+        with headline_b:
+            st.metric("Volatility", _fmt_pct(float(tangency["volatility"])))
+        with headline_c:
+            st.metric("Sharpe ratio", f"{float(tangency['sharpe_ratio']):.2f}")
 
     max_vol_pct = float(tangency["volatility"]) * 100.0
     default_target_pct = min(10.0, max_vol_pct)
 
-    st.markdown("<div class='results-shell'>", unsafe_allow_html=True)
-    target_vol_pct = st.slider(
-        "Target portfolio volatility (%)",
-        min_value=0.0,
-        max_value=max_vol_pct,
-        value=default_target_pct,
-        step=0.1,
-        format="%.1f%%",
-        help="Slide from all-cash toward the tangency portfolio.",
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(
+            "<div class='panel-title'>Target volatility</div><div class='panel-copy'>Move from all cash toward the tangency portfolio until the final risk level matches your target.</div>",
+            unsafe_allow_html=True,
+        )
+        target_vol_pct = st.slider(
+            "Target portfolio volatility (%)",
+            min_value=0.0,
+            max_value=max_vol_pct,
+            value=default_target_pct,
+            step=0.1,
+            format="%.1f%%",
+            help="Slide from all cash toward the tangency portfolio.",
+        )
 
     final_portfolio = target_portfolio(
         tangency_portfolio=tangency,
@@ -586,15 +709,20 @@ if st.session_state.optimization_complete and st.session_state.tangency_portfoli
         risk_free_rate=st.session_state.risk_free_rate,
     )
 
-    final_a, final_b, final_c, final_d = st.columns(4, gap="large")
-    with final_a:
-        st.metric("Expected return", _fmt_pct(float(final_portfolio["expected_return"])))
-    with final_b:
-        st.metric("Volatility", _fmt_pct(float(final_portfolio["volatility"])))
-    with final_c:
-        st.metric("Sharpe ratio", f"{float(final_portfolio['sharpe_ratio']):.2f}")
-    with final_d:
-        st.metric("Cash allocation", _fmt_pct(float(final_portfolio["cash_weight"])))
+    with st.container(border=True):
+        st.markdown(
+            "<div class='panel-title'>Final portfolio</div><div class='panel-copy'>These numbers reflect the risky portfolio scaled with cash to hit the selected volatility.</div>",
+            unsafe_allow_html=True,
+        )
+        final_a, final_b, final_c, final_d = st.columns(4, gap="large")
+        with final_a:
+            st.metric("Expected return", _fmt_pct(float(final_portfolio["expected_return"])))
+        with final_b:
+            st.metric("Volatility", _fmt_pct(float(final_portfolio["volatility"])))
+        with final_c:
+            st.metric("Sharpe ratio", f"{float(final_portfolio['sharpe_ratio']):.2f}")
+        with final_d:
+            st.metric("Cash allocation", _fmt_pct(float(final_portfolio["cash_weight"])))
 
     render_results(
         tangency=tangency,
@@ -604,10 +732,11 @@ if st.session_state.optimization_complete and st.session_state.tangency_portfoli
     )
 
 else:
-    _render_signal_card(
-        "No allocation yet",
-        "Once both files are loaded and the portfolio is solved, the tangency mix, target slider, and final allocation story will appear here.",
-    )
+    with st.container(border=True):
+        _render_panel_intro(
+            "No allocation yet",
+            "Solve the model to see the tangency portfolio, the target volatility slider, and the final allocation.",
+        )
 
 st.markdown(
     """

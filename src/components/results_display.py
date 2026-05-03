@@ -27,7 +27,7 @@ def render_results(
             "The frontier shows the feasible risky mix. The dashed line shows the capital market line from cash to the tangency portfolio."
         )
         chart = _create_chart(tangency, final_portfolio, cml_points, rf_rate)
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, use_container_width=True, theme=None)
 
     with summary_col:
         st.markdown("#### Allocation mix")
@@ -35,7 +35,7 @@ def render_results(
             "The final portfolio is the tangency portfolio scaled to your target volatility."
         )
         allocation_chart = _create_allocation_chart(alloc_df)
-        st.altair_chart(allocation_chart, use_container_width=True)
+        st.altair_chart(allocation_chart, use_container_width=True, theme=None)
         st.markdown(
             f"""
             <div style="
@@ -195,6 +195,7 @@ def _create_chart(
     x_axis = alt.X(
         "x:Q",
         title="Volatility (Risk)",
+        scale=alt.Scale(nice=True, zero=False, padding=12),
         axis=alt.Axis(
             format="%",
             labelColor="#6e6a63",
@@ -207,6 +208,7 @@ def _create_chart(
     y_axis = alt.Y(
         "y:Q",
         title="Expected Return",
+        scale=alt.Scale(nice=True, zero=False, padding=12),
         axis=alt.Axis(
             format="%",
             labelColor="#6e6a63",
@@ -307,7 +309,10 @@ def _create_chart(
     return (
         (frontier + cml + assets + sharpe + target)
         .properties(height=400)
+        .configure(background="#fffdf9")
         .configure_view(stroke=None)
+        .configure_axis(labelFont="Urbanist", titleFont="Urbanist")
+        .configure_legend(labelFont="Urbanist", titleFont="Urbanist")
     )
 
 
@@ -328,6 +333,7 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
             x=alt.X(
                 "Weight:Q",
                 title="Weight",
+                scale=alt.Scale(nice=True, zero=True),
                 axis=alt.Axis(
                     format="%",
                     labelColor="#6e6a63",
@@ -357,7 +363,9 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
             ],
         )
         .properties(height=max(160, 48 * len(chart_df)))
+        .configure(background="#fffdf9")
         .configure_view(stroke=None)
+        .configure_axis(labelFont="Urbanist", titleFont="Urbanist")
     )
 
 
