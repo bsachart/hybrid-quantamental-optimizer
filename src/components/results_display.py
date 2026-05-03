@@ -222,92 +222,109 @@ def _create_chart(
     # --- LAYER 1: LINES ---
     df_lines = df[df["MarkType"] == "line"].copy()
 
+    layers = []
+
     # Frontier line
     df_frontier = df_lines[df_lines["Category"] == "Efficient Frontier"]
-    frontier = (
-        alt.Chart(df_frontier)
-        .mark_line(size=3)
-        .encode(
-            x=x_axis,
-            y=y_axis,
-            color=alt.Color(
-                "Category:N",
-                scale=color_scale,
-                legend=alt.Legend(title="Series", labelColor="#4d4b46", titleColor="#22252b"),
-            ),
-            order="x:Q",
+    if len(df_frontier) >= 2:
+        frontier = (
+            alt.Chart(df_frontier)
+            .mark_line(size=3)
+            .encode(
+                x=x_axis,
+                y=y_axis,
+                color=alt.Color(
+                    "Category:N",
+                    scale=color_scale,
+                    legend=alt.Legend(
+                        title="Series", labelColor="#4d4b46", titleColor="#22252b"
+                    ),
+                ),
+                order="x:Q",
+            )
         )
-    )
+        layers.append(frontier)
 
     # CML line (dashed)
     df_cml = df_lines[df_lines["Category"] == "CML"]
-    cml = (
-        alt.Chart(df_cml)
-        .mark_line(size=2, strokeDash=[5, 5])
-        .encode(
-            x=x_axis,
-            y=y_axis,
-            color=alt.Color("Category:N", scale=color_scale),
-            order="x:Q",
+    if len(df_cml) >= 2:
+        cml = (
+            alt.Chart(df_cml)
+            .mark_line(size=2, strokeDash=[5, 5])
+            .encode(
+                x=x_axis,
+                y=y_axis,
+                color=alt.Color("Category:N", scale=color_scale),
+                order="x:Q",
+            )
         )
-    )
+        layers.append(cml)
 
     # --- LAYER 2: POINTS ---
     df_points = df[df["MarkType"] == "point"].copy()
 
     # Assets (circles)
     df_assets = df_points[df_points["Category"] == "Assets"]
-    assets = (
-        alt.Chart(df_assets)
-        .mark_circle(size=100, opacity=0.8)
-        .encode(
-            x=x_axis,
-            y=y_axis,
-            color=alt.Color("Category:N", scale=color_scale),
-            tooltip=[
-                alt.Tooltip("Label:N", title="Ticker"),
-                alt.Tooltip("x:Q", format=".2%", title="Volatility"),
-                alt.Tooltip("y:Q", format=".2%", title="Return"),
-            ],
+    if not df_assets.empty:
+        assets = (
+            alt.Chart(df_assets)
+            .mark_circle(size=100, opacity=0.8)
+            .encode(
+                x=x_axis,
+                y=y_axis,
+                color=alt.Color("Category:N", scale=color_scale),
+                tooltip=[
+                    alt.Tooltip("Label:N", title="Ticker"),
+                    alt.Tooltip("x:Q", format=".2%", title="Volatility"),
+                    alt.Tooltip("y:Q", format=".2%", title="Return"),
+                ],
+            )
         )
-    )
+        layers.append(assets)
 
     # Max Sharpe (star)
     df_sharpe = df_points[df_points["Category"] == "Max Sharpe"]
-    sharpe = (
-        alt.Chart(df_sharpe)
-        .mark_point(shape="cross", size=200, filled=True)
-        .encode(
-            x=x_axis,
-            y=y_axis,
-            color=alt.Color("Category:N", scale=color_scale),
-            tooltip=[
-                alt.Tooltip("Label:N", title="Portfolio"),
-                alt.Tooltip("x:Q", format=".2%", title="Volatility"),
-                alt.Tooltip("y:Q", format=".2%", title="Return"),
-            ],
+    if not df_sharpe.empty:
+        sharpe = (
+            alt.Chart(df_sharpe)
+            .mark_point(shape="cross", size=200, filled=True)
+            .encode(
+                x=x_axis,
+                y=y_axis,
+                color=alt.Color("Category:N", scale=color_scale),
+                tooltip=[
+                    alt.Tooltip("Label:N", title="Portfolio"),
+                    alt.Tooltip("x:Q", format=".2%", title="Volatility"),
+                    alt.Tooltip("y:Q", format=".2%", title="Return"),
+                ],
+            )
         )
-    )
+        layers.append(sharpe)
 
     # Target Portfolio (diamond)
     df_target = df_points[df_points["Category"] == "Target Portfolio"]
-    target = (
-        alt.Chart(df_target)
-        .mark_point(shape="diamond", size=200, filled=True)
-        .encode(
-            x=x_axis,
-            y=y_axis,
-            color=alt.Color("Category:N", scale=color_scale),
-            tooltip=[
-                alt.Tooltip("Label:N", title="Portfolio"),
-                alt.Tooltip("x:Q", format=".2%", title="Volatility"),
-                alt.Tooltip("y:Q", format=".2%", title="Return"),
-            ],
+    if not df_target.empty:
+        target = (
+            alt.Chart(df_target)
+            .mark_point(shape="diamond", size=200, filled=True)
+            .encode(
+                x=x_axis,
+                y=y_axis,
+                color=alt.Color("Category:N", scale=color_scale),
+                tooltip=[
+                    alt.Tooltip("Label:N", title="Portfolio"),
+                    alt.Tooltip("x:Q", format=".2%", title="Volatility"),
+                    alt.Tooltip("y:Q", format=".2%", title="Return"),
+                ],
+            )
         )
-    )
+        layers.append(target)
+
+    if not layers:
+        return alt.Chart(pd.DataFrame({"x": [0.0], "y": [0.0]})).mark_point()
 
     return (
-        (frontier + cml + assets + sharpe + target)
+        alt.layer(*layers)
         .properties(height=400)
         .configure(background="#fffdf9")
         .configure_view(stroke=None)
@@ -322,6 +339,9 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
         return alt.Chart(pd.DataFrame({"Asset": [], "Weight": []})).mark_bar()
 
     chart_df = alloc_df.copy()
+    chart_df = chart_df[np.isfinite(chart_df["Weight"])].copy()
+    if chart_df.empty:
+        return alt.Chart(pd.DataFrame({"Asset": [], "Weight": []})).mark_bar()
     chart_df["Category"] = chart_df["Asset"].apply(
         lambda asset: "Cash" if asset == "CASH" else "Risky assets"
     )
@@ -333,6 +353,7 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
             x=alt.X(
                 "Weight:Q",
                 title="Weight",
+                stack=None,
                 scale=alt.Scale(nice=True, zero=True),
                 axis=alt.Axis(
                     format="%",
