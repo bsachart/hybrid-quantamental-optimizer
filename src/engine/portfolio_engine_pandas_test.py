@@ -55,3 +55,4 @@ def test_pandas_target_portfolio_scaling():
 
     assert np.isclose(final["cash_weight"], 0.5)
     assert np.isclose(np.sum(final["weights"]) + final["cash_weight"], 1.0)
+    assert np.isclose(final["sharpe_ratio"], tangency["sharpe_ratio"])

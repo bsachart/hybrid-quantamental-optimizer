@@ -54,6 +54,7 @@ def test_scale_portfolio_to_target_volatility_scalar():
     assert np.isclose(result["cash_weight"], 0.5)
     assert np.isclose(result["expected_return"], 0.07)
     assert np.isclose(result["volatility"], 0.10)
+    assert np.isclose(result["sharpe_ratio"], tangency["sharpe_ratio"])
     assert result["tickers"] == ["A", "B"]
 
 
@@ -66,6 +67,7 @@ def test_scale_portfolio_to_target_volatility_caps_at_tangency():
     assert np.isclose(result["cash_weight"], 0.0)
     assert np.isclose(result["expected_return"], tangency["expected_return"])
     assert np.isclose(result["volatility"], tangency["volatility"])
+    assert np.isclose(result["sharpe_ratio"], tangency["sharpe_ratio"])
 
 
 def test_scale_portfolio_to_target_volatility_list_input():
@@ -85,7 +87,20 @@ def test_create_cash_portfolio():
 
     np.testing.assert_allclose(result["weights"], [0.0, 0.0])
     assert np.isclose(result["expected_return"], 0.03)
+    assert np.isclose(result["sharpe_ratio"], 0.0)
     assert result["tickers"] == tangency["tickers"]
+
+
+def test_scale_portfolio_to_zero_target_volatility_returns_cash():
+    tangency = sample_portfolio()
+
+    result = scale_portfolio_to_target_volatility(tangency, 0.0, 0.02)
+
+    np.testing.assert_allclose(result["weights"], [0.0, 0.0])
+    assert np.isclose(result["cash_weight"], 1.0)
+    assert np.isclose(result["expected_return"], 0.02)
+    assert np.isclose(result["volatility"], 0.0)
+    assert np.isclose(result["sharpe_ratio"], 0.0)
 
 
 def test_zero_volatility_portfolio_scales_to_cash():

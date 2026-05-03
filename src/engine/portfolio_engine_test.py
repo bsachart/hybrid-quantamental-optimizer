@@ -157,6 +157,7 @@ def test_target_portfolio_scaling(mock_prices, mock_metrics):
     assert np.isclose(final["volatility"], target_vol)
     assert np.isclose(final["cash_weight"], 0.5)
     assert np.isclose(np.sum(final["weights"]) + final["cash_weight"], 1.0)
+    assert np.isclose(final["sharpe_ratio"], tangency["sharpe_ratio"])
 
     # Verify Tickers Preserved
     assert final["tickers"] == ["A", "B"]
@@ -203,6 +204,7 @@ def test_target_portfolio_caps_above_tangency_volatility(mock_prices, mock_metri
     np.testing.assert_allclose(final["weights"], tangency["weights"])
     assert np.isclose(final["cash_weight"], 0.0)
     assert np.isclose(final["expected_return"], tangency["expected_return"])
+    assert np.isclose(final["sharpe_ratio"], tangency["sharpe_ratio"])
 
 
 def test_generate_cml_default_step(mock_prices, mock_metrics):

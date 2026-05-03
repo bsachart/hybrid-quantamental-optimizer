@@ -112,6 +112,9 @@ def _scale_single_target_volatility(
         return create_cash_portfolio(tangency_portfolio, risk_free_rate)
 
     ratio = min(target_volatility / tangency_volatility, 1.0)
+    if ratio <= ZERO_VOLATILITY_EPSILON:
+        return create_cash_portfolio(tangency_portfolio, risk_free_rate)
+
     cash_weight = 1.0 - ratio
     scaled_volatility = tangency_volatility * ratio
     scaled_return = (
@@ -119,15 +122,11 @@ def _scale_single_target_volatility(
         + risk_free_rate * cash_weight
     )
 
-    scaled_sharpe = tangency_portfolio["sharpe_ratio"]
-    if ratio < 1.0 and scaled_volatility > ZERO_VOLATILITY_EPSILON:
-        scaled_sharpe = (scaled_return - risk_free_rate) / scaled_volatility
-
     return {
         "weights": tangency_portfolio["weights"] * ratio,
         "expected_return": scaled_return,
         "volatility": scaled_volatility,
-        "sharpe_ratio": scaled_sharpe,
+        "sharpe_ratio": tangency_portfolio["sharpe_ratio"],
         "cash_weight": cash_weight,
         "tickers": tangency_portfolio["tickers"],
         "asset_returns": tangency_portfolio["asset_returns"],
