@@ -122,24 +122,6 @@ def _inject_styles() -> None:
         margin-top: 1rem;
     }
 
-    .badge-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.7rem;
-        margin-top: 1.4rem;
-    }
-
-    .badge {
-        font-family: "Urbanist", "Segoe UI", sans-serif;
-        border-radius: 999px;
-        background: rgba(22, 108, 89, 0.10);
-        color: var(--accent);
-        border: 1px solid rgba(22, 108, 89, 0.14);
-        font-size: 0.84rem;
-        font-weight: 600;
-        padding: 0.4rem 0.8rem;
-    }
-
     .brief-card {
         background: var(--panel);
         border: 1px solid rgba(34, 37, 43, 0.10);
@@ -506,11 +488,6 @@ def _render_hero() -> None:
                     Build a portfolio from return assumptions, volatility inputs,
                     and a target risk level. Upload the market data, solve the risky
                     mix, then decide how much to hold in cash.
-                </div>
-                <div class="badge-row">
-                    <span class="badge">Expected returns</span>
-                    <span class="badge">Forward volatility</span>
-                    <span class="badge">Cash allocation</span>
                 </div>
             </div>
             """,
