@@ -570,4 +570,4 @@ def _render_allocation_table(alloc_df: pd.DataFrame) -> None:
         """
     ).strip()
 
-    st.markdown(table_html, unsafe_allow_html=True)
+    st.html(table_html)
