@@ -106,10 +106,10 @@ def _inject_styles() -> None:
     }
 
     .hero-title {
-        font-size: clamp(3rem, 4.5vw, 4.6rem);
-        line-height: 1.02;
+        font-size: clamp(2.8rem, 4vw, 4.2rem);
+        line-height: 1.04;
         margin: 0;
-        max-width: 15ch;
+        max-width: 11ch;
         text-wrap: balance;
     }
 
@@ -238,6 +238,39 @@ def _inject_styles() -> None:
         margin-bottom: 0.95rem;
     }
 
+    .control-label {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
+        color: var(--ink);
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 252, 0.94);
+        border: 1px solid rgba(34, 37, 43, 0.08);
+        border-radius: 18px;
+        padding: 1rem 1rem 1.1rem;
+        min-height: 6.75rem;
+    }
+
+    .stat-label {
+        font-family: "Urbanist", "Segoe UI", sans-serif;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.72rem;
+        font-weight: 700;
+        margin-bottom: 0.8rem;
+    }
+
+    .stat-value {
+        color: var(--ink);
+        font-family: "Gelasio", "Georgia", serif;
+        font-size: 2.1rem;
+        line-height: 1.05;
+    }
+
     .signal-card {
         background: rgba(22, 108, 89, 0.06);
         border-radius: 18px;
@@ -267,6 +300,33 @@ def _inject_styles() -> None:
         padding-bottom: 1rem;
     }
 
+    div[data-testid="stFileUploaderDropzone"] section small,
+    div[data-testid="stFileUploaderDropzone"] section span,
+    div[data-testid="stFileUploaderDropzone"] section p {
+        color: var(--muted);
+    }
+
+    div[data-testid="stFileUploaderDropzone"] button {
+        background: #f8f6f1;
+        color: var(--ink);
+        border: 1px solid rgba(34, 37, 43, 0.14);
+        border-radius: 999px;
+        box-shadow: none;
+        font-weight: 600;
+    }
+
+    div[data-testid="stFileUploaderDropzone"] button:hover {
+        background: #ede8de;
+        border-color: rgba(34, 37, 43, 0.22);
+    }
+
+    div[data-testid="stFileUploaderDropzone"] button:disabled {
+        background: #f3eee4;
+        color: rgba(34, 37, 43, 0.45);
+        border-color: rgba(34, 37, 43, 0.10);
+        opacity: 1;
+    }
+
     div[data-testid="stExpander"] {
         background: rgba(249, 247, 242, 0.82);
         border: 1px solid rgba(34, 37, 43, 0.09);
@@ -277,6 +337,18 @@ def _inject_styles() -> None:
     div[data-testid="stExpander"] details summary p {
         color: var(--ink);
         font-weight: 600;
+    }
+
+    div[data-testid="stWidgetLabel"] p,
+    div[data-testid="stWidgetLabel"] label,
+    label[data-testid="stWidgetLabel"] {
+        color: var(--ink);
+        font-weight: 600;
+    }
+
+    div[data-testid="stToggle"] label,
+    div[data-testid="stToggle"] p {
+        color: var(--muted);
     }
 
     div[data-baseweb="select"] > div,
@@ -356,6 +428,15 @@ def _inject_styles() -> None:
 
     button[kind="secondary"] {
         border-radius: 999px;
+        background: #f8f6f1;
+        color: var(--ink);
+        border: 1px solid rgba(34, 37, 43, 0.14);
+        box-shadow: none;
+    }
+
+    button[kind="secondary"]:hover {
+        background: #ede8de;
+        border-color: rgba(34, 37, 43, 0.22);
     }
 
     .results-shell {
@@ -387,7 +468,7 @@ def _inject_styles() -> None:
 
 
 def _render_hero() -> None:
-    hero_col, brief_col = st.columns([1.6, 1], gap="medium")
+    hero_col, brief_col = st.columns([1.9, 1.1], gap="medium")
 
     with hero_col:
         st.markdown(
@@ -466,6 +547,25 @@ def _render_panel_intro(title: str, body: str) -> None:
         f"""
         <div class="panel-title">{escape(title)}</div>
         <div class="panel-copy">{escape(body)}</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_control_label(label: str) -> None:
+    st.markdown(
+        f"<div class='control-label'>{escape(label)}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_stat_card(label: str, value: str) -> None:
+    st.markdown(
+        f"""
+        <div class="stat-card">
+            <div class="stat-label">{escape(label)}</div>
+            <div class="stat-value">{escape(value)}</div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -577,6 +677,7 @@ with controls_col:
         )
         control_a, control_b = st.columns(2, gap="large")
         with control_a:
+            _render_control_label("Risk-free rate (%)")
             risk_free_rate = (
                 st.slider(
                     "Risk-free rate (%)",
@@ -586,17 +687,20 @@ with controls_col:
                     step=0.25,
                     format="%.2f%%",
                     disabled=not files_ready,
+                    label_visibility="collapsed",
                 )
                 / 100.0
             )
 
         with control_b:
+            _render_control_label("Risk model")
             risk_model_label = st.radio(
                 "Risk model",
                 ["Forward-Looking", "Historical"],
                 index=0,
                 horizontal=True,
                 disabled=not files_ready,
+                label_visibility="collapsed",
             )
             risk_model = (
                 RiskModel.FORWARD_LOOKING
@@ -679,11 +783,11 @@ if st.session_state.optimization_complete and st.session_state.tangency_portfoli
         )
         headline_a, headline_b, headline_c = st.columns(3, gap="large")
         with headline_a:
-            st.metric("Expected return", _fmt_pct(float(tangency["expected_return"])))
+            _render_stat_card("Expected return", _fmt_pct(float(tangency["expected_return"])))
         with headline_b:
-            st.metric("Volatility", _fmt_pct(float(tangency["volatility"])))
+            _render_stat_card("Volatility", _fmt_pct(float(tangency["volatility"])))
         with headline_c:
-            st.metric("Sharpe ratio", f"{float(tangency['sharpe_ratio']):.2f}")
+            _render_stat_card("Sharpe ratio", f"{float(tangency['sharpe_ratio']):.2f}")
 
     max_vol_pct = float(tangency["volatility"]) * 100.0
     default_target_pct = min(10.0, max_vol_pct)
@@ -693,6 +797,7 @@ if st.session_state.optimization_complete and st.session_state.tangency_portfoli
             "<div class='panel-title'>Target volatility</div><div class='panel-copy'>Move from all cash toward the tangency portfolio until the final risk level matches your target.</div>",
             unsafe_allow_html=True,
         )
+        _render_control_label("Target portfolio volatility (%)")
         target_vol_pct = st.slider(
             "Target portfolio volatility (%)",
             min_value=0.0,
@@ -701,6 +806,7 @@ if st.session_state.optimization_complete and st.session_state.tangency_portfoli
             step=0.1,
             format="%.1f%%",
             help="Slide from all cash toward the tangency portfolio.",
+            label_visibility="collapsed",
         )
 
     final_portfolio = target_portfolio(
@@ -716,13 +822,13 @@ if st.session_state.optimization_complete and st.session_state.tangency_portfoli
         )
         final_a, final_b, final_c, final_d = st.columns(4, gap="large")
         with final_a:
-            st.metric("Expected return", _fmt_pct(float(final_portfolio["expected_return"])))
+            _render_stat_card("Expected return", _fmt_pct(float(final_portfolio["expected_return"])))
         with final_b:
-            st.metric("Volatility", _fmt_pct(float(final_portfolio["volatility"])))
+            _render_stat_card("Volatility", _fmt_pct(float(final_portfolio["volatility"])))
         with final_c:
-            st.metric("Sharpe ratio", f"{float(final_portfolio['sharpe_ratio']):.2f}")
+            _render_stat_card("Sharpe ratio", f"{float(final_portfolio['sharpe_ratio']):.2f}")
         with final_d:
-            st.metric("Cash allocation", _fmt_pct(float(final_portfolio["cash_weight"])))
+            _render_stat_card("Cash allocation", _fmt_pct(float(final_portfolio["cash_weight"])))
 
     render_results(
         tangency=tangency,
