@@ -53,6 +53,9 @@ problem.
   interface simplicity, scope discipline, and verification strategy.
 - Task lists MUST include explicit verification work and keep user stories
   independently implementable where practical.
+- UI-facing changes MUST be approached with the judgment of experienced UX and
+  UI designers and researchers, including clear user flows, meaningful states,
+  accessibility, and visual consistency.
 - Multi-step work SHOULD be captured in meaningful checkpoint commits and
   synced at sensible milestones to reduce drift and review risk.
 - Complexity added for a real need MUST be justified in the plan, including why
