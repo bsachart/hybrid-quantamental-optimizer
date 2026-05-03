@@ -1,50 +1,91 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Hybrid Quantamental Optimizer Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Simplicity Through Deep Modules
+The codebase MUST reduce complexity rather than relocate it. In the spirit of
+John Ousterhout, each module MUST expose a small, stable interface and hide
+operational detail behind it.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+- New abstractions MUST make the system easier to understand, test, or change.
+- Shallow wrappers, speculative layers, and wide configuration surfaces are
+  prohibited.
+- Complexity SHOULD be absorbed inside modules, not pushed onto callers.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Small, Atomic Changes
+Each change MUST represent one logical unit of value.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+- Pull requests SHOULD stay as small as practical.
+- A change that cannot be explained clearly in one sentence MUST be split.
+- Review, rollback, and verification MUST remain simple.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Verification Before Completion
+No change is complete until it has passed a reproducible verification step.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+- Verification MAY be tests, linting, type checks, builds, CLI runs, or other
+  repeatable checks appropriate to the change.
+- Output inspection alone is insufficient.
+- Verification evidence MUST be recorded in the relevant plan, task list,
+  pull request, or delivery summary.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Professional Clarity
+Code and documentation MUST be concise, precise, and current.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+- Names MUST communicate intent.
+- Comments MUST add non-obvious information.
+- Specifications MUST describe behavior and scope clearly.
+- Redundant, vague, or low-signal documentation is prohibited.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. High-Leverage Delivery
+Work MUST prioritize the smallest high-value slice that solves the current
+problem.
+
+- Prefer incremental delivery over speculative design.
+- Default to the simplest solution that satisfies current requirements.
+- Premature generalization is prohibited unless it removes more complexity than
+  it introduces.
+
+## Workflow Rules
+
+- Feature specifications MUST stay focused on user-visible behavior, scope, and
+  success criteria rather than implementation detail.
+- Implementation plans MUST include a constitution check that confirms
+  interface simplicity, scope discipline, and verification strategy.
+- Task lists MUST include explicit verification work and keep user stories
+  independently implementable where practical.
+- Complexity added for a real need MUST be justified in the plan, including why
+  a simpler approach was rejected.
+
+## Boundaries
+
+This constitution governs enduring engineering practice only.
+
+The following MUST live outside the constitution:
+
+- product scope
+- technology choices
+- UI direction
+- provider or integration decisions
+- feature-specific architecture
+
+Those decisions belong in specifications, plans, ADRs, or operational
+documentation.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution overrides conflicting local habits and informal process.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+- Every review MUST confirm that interfaces remain simple and that complexity
+  is hidden inside deep modules.
+- Every review MUST confirm that scope is no larger than necessary for one
+  logical change.
+- Every review MUST confirm that verification was executed and documented.
+- Amendments MUST be documented, reviewed for template impact, and versioned.
+
+Versioning policy:
+
+- MAJOR: removes or materially redefines a governing principle
+- MINOR: adds a principle or materially expands governance
+- PATCH: clarifies wording without changing intent
+
+**Version**: 1.0.0 | **Ratified**: 2026-05-03 | **Last Amended**: 2026-05-03
