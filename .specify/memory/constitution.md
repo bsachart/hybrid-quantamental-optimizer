@@ -53,6 +53,8 @@ problem.
   interface simplicity, scope discipline, and verification strategy.
 - Task lists MUST include explicit verification work and keep user stories
   independently implementable where practical.
+- Multi-step work SHOULD be captured in meaningful checkpoint commits and
+  synced at sensible milestones to reduce drift and review risk.
 - Complexity added for a real need MUST be justified in the plan, including why
   a simpler approach was rejected.
 
