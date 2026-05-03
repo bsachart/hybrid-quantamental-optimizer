@@ -8,15 +8,15 @@ Two-stage portfolio construction:
 
 from typing import List, Optional, Union
 
-from src.engine.data_loader import load_universe, FileInput
-from src.engine.optimizer import find_tangency_portfolio
-from src.engine.portfolio_math import (
+from .data_loader import load_universe, FileInput
+from .optimizer import find_tangency_portfolio
+from .portfolio_math import (
     LabeledPortfolioMetrics,
     build_labeled_portfolio_metrics,
     generate_cml_portfolios,
     scale_portfolio_to_target_volatility,
 )
-from src.engine.risk import RiskModel, calculate_covariance
+from .risk import RiskModel, calculate_covariance
 
 
 def optimize_portfolio(

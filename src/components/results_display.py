@@ -15,37 +15,63 @@ def render_results(
     cml_points: List[Dict],
     rf_rate: float,
 ):
-    """Render the chart and allocation table."""
-    chart = _create_chart(tangency, final_portfolio, cml_points, rf_rate)
-    st.altair_chart(chart, use_container_width=True)
-
-    st.markdown("---")
-    st.subheader("📋 Final Allocation Breakdown")
-
     alloc_df = _create_allocation_df(final_portfolio, tangency)
+    risky_pct = (1 - _safe_float(final_portfolio.get("cash_weight"))) * 100
+    cash_pct = _safe_float(final_portfolio.get("cash_weight")) * 100
+
+    chart_col, summary_col = st.columns([1.65, 1], gap="large")
+
+    with chart_col:
+        st.markdown("#### Risk / return map")
+        st.caption(
+            "The frontier shows the feasible risky mix. The dashed line shows the capital market line from cash to the tangency portfolio."
+        )
+        chart = _create_chart(tangency, final_portfolio, cml_points, rf_rate)
+        st.altair_chart(chart, use_container_width=True)
+
+    with summary_col:
+        st.markdown("#### Allocation mix")
+        st.caption(
+            "The final portfolio is the tangency portfolio scaled to your target volatility."
+        )
+        allocation_chart = _create_allocation_chart(alloc_df)
+        st.altair_chart(allocation_chart, use_container_width=True)
+        st.markdown(
+            f"""
+            <div style="
+                background: rgba(22, 108, 89, 0.08);
+                border: 1px solid rgba(22, 108, 89, 0.14);
+                border-radius: 18px;
+                padding: 1rem 1rem 0.95rem;
+                color: #355247;
+                line-height: 1.6;
+                margin-top: 0.4rem;
+            ">
+                <strong style="display:block; color:#1f3b32; margin-bottom:0.2rem;">Allocation readout</strong>
+                {risky_pct:.1f}% sits in the optimized risky mix and {cash_pct:.1f}% remains in cash
+                to land on a {_safe_float(final_portfolio.get('volatility')):.1%} risk target.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # Download Results Button
+    csv_data = _create_results_csv(final_portfolio, tangency)
+    st.download_button(
+        label="Download results (CSV)",
+        data=csv_data,
+        file_name="portfolio_optimization_results.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
+    st.markdown("#### Final allocation breakdown")
     st.dataframe(
         alloc_df.style.format(
             {"Weight": "{:.2%}", "Expected Return": "{:.2%}", "Volatility": "{:.2%}"}
         ),
         use_container_width=True,
         hide_index=True,
-    )
-
-    risky_pct = (1 - _safe_float(final_portfolio.get("cash_weight"))) * 100
-    cash_pct = _safe_float(final_portfolio.get("cash_weight")) * 100
-    st.info(
-        f"💡 **Allocation Strategy**: {risky_pct:.1f}% in optimized risky portfolio, "
-        f"{cash_pct:.1f}% in cash to achieve {_safe_float(final_portfolio.get('volatility')):.1%} target volatility."
-    )
-
-    # Download Results Button
-    csv_data = _create_results_csv(final_portfolio, tangency)
-    st.download_button(
-        label="📥 Download Results (CSV)",
-        data=csv_data,
-        file_name="portfolio_optimization_results.csv",
-        mime="text/csv",
-        use_container_width=True,
     )
 
 
@@ -147,10 +173,12 @@ def _create_chart(
     )
 
     df = pd.DataFrame(rows)
+    if not df.empty:
+        df = df[np.isfinite(df["x"]) & np.isfinite(df["y"])].copy()
 
     # Ensure no empty DataFrame
     if df.empty:
-        return alt.Chart(pd.DataFrame({"x": [0], "y": [0]})).mark_point()
+        return alt.Chart(pd.DataFrame({"x": [0.0], "y": [0.0]})).mark_point()
 
     # --- CHART CONFIGURATION ---
     color_scale = alt.Scale(
@@ -161,15 +189,33 @@ def _create_chart(
             "Max Sharpe",
             "Target Portfolio",
         ],
-        range=["#00E676", "#FFC107", "#00BCD4", "#FF5252", "#FFEB3B"],
+        range=["#166c59", "#c76b3f", "#6d8391", "#0f4d40", "#d7aa4b"],
     )
 
     x_axis = alt.X(
         "x:Q",
         title="Volatility (Risk)",
-        axis=alt.Axis(format="%"),
+        axis=alt.Axis(
+            format="%",
+            labelColor="#6e6a63",
+            titleColor="#22252b",
+            gridColor="rgba(34, 37, 43, 0.12)",
+            domainColor="rgba(34, 37, 43, 0.16)",
+            tickColor="rgba(34, 37, 43, 0.16)",
+        ),
     )
-    y_axis = alt.Y("y:Q", title="Expected Return", axis=alt.Axis(format="%"))
+    y_axis = alt.Y(
+        "y:Q",
+        title="Expected Return",
+        axis=alt.Axis(
+            format="%",
+            labelColor="#6e6a63",
+            titleColor="#22252b",
+            gridColor="rgba(34, 37, 43, 0.12)",
+            domainColor="rgba(34, 37, 43, 0.16)",
+            tickColor="rgba(34, 37, 43, 0.16)",
+        ),
+    )
 
     # --- LAYER 1: LINES ---
     df_lines = df[df["MarkType"] == "line"].copy()
@@ -183,7 +229,9 @@ def _create_chart(
             x=x_axis,
             y=y_axis,
             color=alt.Color(
-                "Category:N", scale=color_scale, legend=alt.Legend(title="Legend")
+                "Category:N",
+                scale=color_scale,
+                legend=alt.Legend(title="Series", labelColor="#4d4b46", titleColor="#22252b"),
             ),
             order="x:Q",
         )
@@ -256,22 +304,60 @@ def _create_chart(
         )
     )
 
-    # Reference lines at origin (visible when panning)
-    x_zero = (
-        alt.Chart(pd.DataFrame({"x": [0]}))
-        .mark_rule(color="gray", strokeDash=[4, 4])
-        .encode(x="x:Q")
+    return (
+        (frontier + cml + assets + sharpe + target)
+        .properties(height=400)
+        .configure_view(stroke=None)
     )
-    y_zero = (
-        alt.Chart(pd.DataFrame({"y": [0]}))
-        .mark_rule(color="gray", strokeDash=[4, 4])
-        .encode(y="y:Q")
+
+
+def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
+    """Create a compact allocation bar chart."""
+    if alloc_df.empty:
+        return alt.Chart(pd.DataFrame({"Asset": [], "Weight": []})).mark_bar()
+
+    chart_df = alloc_df.copy()
+    chart_df["Category"] = chart_df["Asset"].apply(
+        lambda asset: "Cash" if asset == "CASH" else "Risky assets"
     )
 
     return (
-        (x_zero + y_zero + frontier + cml + assets + sharpe + target)
-        .properties(title="Efficient Frontier & Capital Market Line", height=500)
-        .interactive()
+        alt.Chart(chart_df)
+        .mark_bar(size=24, cornerRadiusEnd=6)
+        .encode(
+            x=alt.X(
+                "Weight:Q",
+                title="Weight",
+                axis=alt.Axis(
+                    format="%",
+                    labelColor="#6e6a63",
+                    titleColor="#22252b",
+                    gridColor="rgba(34, 37, 43, 0.10)",
+                ),
+            ),
+            y=alt.Y(
+                "Asset:N",
+                sort="-x",
+                title=None,
+                axis=alt.Axis(labelColor="#4d4b46"),
+            ),
+            color=alt.Color(
+                "Category:N",
+                scale=alt.Scale(
+                    domain=["Risky assets", "Cash"],
+                    range=["#166c59", "#c76b3f"],
+                ),
+                legend=None,
+            ),
+            tooltip=[
+                alt.Tooltip("Asset:N"),
+                alt.Tooltip("Weight:Q", format=".2%"),
+                alt.Tooltip("Expected Return:Q", format=".2%"),
+                alt.Tooltip("Volatility:Q", format=".2%"),
+            ],
+        )
+        .properties(height=max(160, 48 * len(chart_df)))
+        .configure_view(stroke=None)
     )
 
 

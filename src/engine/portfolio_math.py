@@ -6,7 +6,7 @@ from typing import List, Optional, Sequence, Union
 
 import numpy as np
 
-from src.engine.optimizer import PortfolioMetrics
+from .optimizer import PortfolioMetrics
 
 ZERO_VOLATILITY_EPSILON = 1e-8
 
