@@ -17,8 +17,8 @@
 
 **Purpose**: Establish the verification baseline and confirm the active cleanup seam
 
-- [ ] T001 Run the baseline engine verification command from `specs/001-codebase-cleanup/quickstart.md`
-- [ ] T002 Confirm the preserved public behavior in `specs/001-codebase-cleanup/contracts/python-api.md` before refactoring
+- [x] T001 Run the baseline engine verification command from `specs/001-codebase-cleanup/quickstart.md`
+- [x] T002 Confirm the preserved public behavior in `specs/001-codebase-cleanup/contracts/python-api.md` before refactoring
 
 ---
 
@@ -26,8 +26,8 @@
 
 **Purpose**: Create the shared helper and direct test surface that later story work depends on
 
-- [ ] T003 [P] Create `src/engine/portfolio_math.py` for shared labeled-portfolio assembly, target-volatility scaling, and capital-market-line target generation
-- [ ] T004 [P] Create `src/engine/portfolio_math_test.py` with deterministic unit coverage for shared portfolio math invariants
+- [x] T003 [P] Create `src/engine/portfolio_math.py` for shared labeled-portfolio assembly, target-volatility scaling, and capital-market-line target generation
+- [x] T004 [P] Create `src/engine/portfolio_math_test.py` with deterministic unit coverage for shared portfolio math invariants
 
 **Checkpoint**: Shared portfolio-math helper exists and has direct test coverage
 
@@ -41,12 +41,12 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Extend `src/engine/portfolio_engine_test.py` with exact capital-market-line and cash-allocation assertions for scalar and list target-volatility paths
+- [x] T005 [P] [US1] Extend `src/engine/portfolio_engine_test.py` with exact capital-market-line and cash-allocation assertions for scalar and list target-volatility paths
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Refactor `src/engine/portfolio_engine.py` to use `src/engine/portfolio_math.py` while preserving the public return structure
-- [ ] T007 [US1] Run `pytest src/engine/portfolio_math_test.py src/engine/portfolio_engine_test.py src/engine/optimizer_test.py src/engine/risk_test.py`
+- [x] T006 [US1] Refactor `src/engine/portfolio_engine.py` to use `src/engine/portfolio_math.py` while preserving the public return structure
+- [x] T007 [US1] Run `pytest src/engine/portfolio_math_test.py src/engine/portfolio_engine_test.py src/engine/optimizer_test.py src/engine/risk_test.py`
 
 **Checkpoint**: The active polars engine path remains correct and fully testable
 
@@ -60,12 +60,12 @@
 
 ### Tests for User Story 2
 
-- [ ] T008 [P] [US2] Add `src/engine/portfolio_engine_pandas_test.py` with deterministic smoke coverage for optimization output shape and target-volatility scaling
+- [x] T008 [P] [US2] Add `src/engine/portfolio_engine_pandas_test.py` with deterministic smoke coverage for optimization output shape and target-volatility scaling
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Refactor `src/engine/portfolio_engine_pandas.py` to use `src/engine/portfolio_math.py` and remove duplicated scaling logic
-- [ ] T010 [US2] Run `pytest src/engine/portfolio_engine_pandas_test.py src/engine/portfolio_math_test.py src/engine/portfolio_engine_test.py`
+- [x] T009 [US2] Refactor `src/engine/portfolio_engine_pandas.py` to use `src/engine/portfolio_math.py` and remove duplicated scaling logic
+- [x] T010 [US2] Run `pytest src/engine/portfolio_engine_pandas_test.py src/engine/portfolio_math_test.py src/engine/portfolio_engine_test.py`
 
 **Checkpoint**: Both engine entry points share the same portfolio-scaling logic
 
@@ -79,9 +79,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [P] [US3] Verify `.gitignore` coverage and remove local generated cache directories such as `src/**/__pycache__/` and `src/engine/.pytest_cache/` if present
-- [ ] T012 [US3] Confirm `AGENTS.md` and `.specify/memory/constitution.md` reflect checkpoint commit and sync expectations without extra workflow noise
-- [ ] T013 [US3] Run `git status --short` and confirm only intentional feature files remain
+- [x] T011 [P] [US3] Verify `.gitignore` coverage and remove local generated cache directories such as `src/**/__pycache__/` and `src/engine/.pytest_cache/` if present
+- [x] T012 [US3] Confirm `AGENTS.md` and `.specify/memory/constitution.md` reflect checkpoint commit and sync expectations without extra workflow noise
+- [x] T013 [US3] Run `git status --short` and confirm only intentional feature files remain
 
 **Checkpoint**: Local repository noise is reduced and workflow guidance is explicit
 
@@ -91,8 +91,8 @@
 
 **Purpose**: Final clarity and full verification across the cleanup slice
 
-- [ ] T014 [P] Review docstrings and comments in `src/engine/portfolio_engine.py`, `src/engine/portfolio_engine_pandas.py`, and `src/engine/portfolio_math.py` for concise clarity after refactoring
-- [ ] T015 Run `pytest src/engine` and record final verification evidence for the cleanup slice
+- [x] T014 [P] Review docstrings and comments in `src/engine/portfolio_engine.py`, `src/engine/portfolio_engine_pandas.py`, and `src/engine/portfolio_math.py` for concise clarity after refactoring
+- [x] T015 Run `pytest src/engine` and record final verification evidence for the cleanup slice
 
 ---
 
@@ -135,3 +135,8 @@
 - Preserve the public portfolio API
 - Prefer deep shared helpers over shallow wrappers
 - Mark tasks complete in this file as work lands
+- Verification completed with:
+  - `pytest src/engine/optimizer_test.py src/engine/risk_test.py src/engine/data_loader_test.py src/engine/portfolio_engine_test.py`
+  - `pytest src/engine/portfolio_math_test.py src/engine/portfolio_engine_test.py src/engine/optimizer_test.py src/engine/risk_test.py`
+  - `pytest src/engine/portfolio_engine_pandas_test.py`
+  - `pytest src/engine`

@@ -108,6 +108,27 @@ def test_historical_risk_model_success(mock_prices, mock_metrics):
     assert result["volatility"] > 0
 
 
+def test_default_risk_model_is_forward_looking(mock_prices, mock_metrics):
+    """The default risk model should match explicit forward-looking behavior."""
+    default_result = optimize_portfolio(
+        price_source=mock_prices,
+        metric_source=mock_metrics,
+        risk_free_rate=0.04,
+    )
+    explicit_result = optimize_portfolio(
+        price_source=mock_prices,
+        metric_source=mock_metrics,
+        risk_model=RiskModel.FORWARD_LOOKING,
+        risk_free_rate=0.04,
+    )
+
+    np.testing.assert_allclose(default_result["weights"], explicit_result["weights"])
+    assert np.isclose(
+        default_result["expected_return"], explicit_result["expected_return"]
+    )
+    assert np.isclose(default_result["volatility"], explicit_result["volatility"])
+
+
 # ==============================================================================
 # Targeting & CML Tests
 # ==============================================================================
@@ -162,6 +183,26 @@ def test_efficient_frontier_list_input(mock_prices, mock_metrics):
     assert np.isclose(frontier[0]["volatility"], 0.05)
     assert np.isclose(frontier[1]["volatility"], 0.10)
     assert frontier[2]["tickers"] == ["A", "B"]
+
+
+def test_target_portfolio_caps_above_tangency_volatility(mock_prices, mock_metrics):
+    """Requests above tangency should not introduce leverage."""
+    tangency = optimize_portfolio(
+        mock_prices,
+        mock_metrics,
+        risk_model=RiskModel.FORWARD_LOOKING,
+        risk_free_rate=0.04,
+    )
+
+    final = target_portfolio(
+        tangency,
+        target_volatility=tangency["volatility"] * 1.5,
+        risk_free_rate=0.04,
+    )
+
+    np.testing.assert_allclose(final["weights"], tangency["weights"])
+    assert np.isclose(final["cash_weight"], 0.0)
+    assert np.isclose(final["expected_return"], tangency["expected_return"])
 
 
 def test_generate_cml_default_step(mock_prices, mock_metrics):
