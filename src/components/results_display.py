@@ -2,11 +2,13 @@
 Results Display Component - Unified Data Model
 """
 
+from html import escape
+from typing import Dict, List, Any
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
-from typing import Dict, List, Any
 
 
 def render_results(
@@ -66,13 +68,7 @@ def render_results(
     )
 
     st.markdown("#### Final allocation breakdown")
-    st.dataframe(
-        alloc_df.style.format(
-            {"Weight": "{:.2%}", "Expected Return": "{:.2%}", "Volatility": "{:.2%}"}
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
+    _render_allocation_table(alloc_df)
 
 
 def _safe_float(val: Any) -> float:
@@ -490,3 +486,62 @@ def _create_results_csv(final_portfolio: Dict, tangency: Dict) -> str:
     writer = csv.writer(output)
     writer.writerows(rows)
     return output.getvalue()
+
+
+def _render_allocation_table(alloc_df: pd.DataFrame) -> None:
+    """Render a light-themed allocation table."""
+    if alloc_df.empty:
+        st.info("No allocation rows to display.")
+        return
+
+    rows_html = []
+    for row in alloc_df.itertuples(index=False):
+        rows_html.append(
+            f"""
+            <tr>
+                <td>{escape(str(row[0]))}</td>
+                <td>{row[1]:.2%}</td>
+                <td>{row[2]:.2%}</td>
+                <td>{row[3]:.2%}</td>
+            </tr>
+            """
+        )
+
+    st.markdown(
+        f"""
+        <div style="overflow-x:auto;">
+            <table class="allocation-table" style="
+                width:100%;
+                border-collapse:separate;
+                border-spacing:0;
+                background:rgba(255,255,252,0.96);
+                border:1px solid rgba(34,37,43,0.10);
+                border-radius:18px;
+                overflow:hidden;
+                box-shadow:0 18px 48px rgba(91,70,42,0.06);
+            ">
+                <thead>
+                    <tr style="background:#f3eee4; color:#22252b;">
+                        <th style="text-align:left; padding:0.9rem 1rem; font-weight:700;">Asset</th>
+                        <th style="text-align:right; padding:0.9rem 1rem; font-weight:700;">Weight</th>
+                        <th style="text-align:right; padding:0.9rem 1rem; font-weight:700;">Expected Return</th>
+                        <th style="text-align:right; padding:0.9rem 1rem; font-weight:700;">Volatility</th>
+                    </tr>
+                </thead>
+                <tbody style="color:#3d3a35;">
+                    {''.join(rows_html)}
+                </tbody>
+            </table>
+        </div>
+        <style>
+            .allocation-table tbody tr td {{
+                padding: 0.85rem 1rem;
+                border-top: 1px solid rgba(34,37,43,0.08);
+            }}
+            .allocation-table tbody tr td:not(:first-child) {{
+                text-align: right;
+            }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )

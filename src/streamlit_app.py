@@ -236,6 +236,7 @@ def _inject_styles() -> None:
         font-size: 0.92rem;
         line-height: 1.55;
         margin-bottom: 0.95rem;
+        opacity: 1;
     }
 
     .control-label {
@@ -244,6 +245,7 @@ def _inject_styles() -> None:
         font-size: 0.9rem;
         font-weight: 600;
         margin-bottom: 0.35rem;
+        opacity: 1;
     }
 
     .stat-card {
@@ -256,12 +258,13 @@ def _inject_styles() -> None:
 
     .stat-label {
         font-family: "Urbanist", "Segoe UI", sans-serif;
-        color: var(--muted);
+        color: #6e695f;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         font-size: 0.72rem;
         font-weight: 700;
         margin-bottom: 0.8rem;
+        opacity: 1;
     }
 
     .stat-value {
@@ -269,6 +272,7 @@ def _inject_styles() -> None:
         font-family: "Gelasio", "Georgia", serif;
         font-size: 2.1rem;
         line-height: 1.05;
+        opacity: 1;
     }
 
     .signal-card {
@@ -351,6 +355,13 @@ def _inject_styles() -> None:
         color: var(--muted);
     }
 
+    div[data-testid="stRadio"] p,
+    div[data-testid="stRadio"] span,
+    div[data-testid="stRadio"] label {
+        color: var(--ink) !important;
+        opacity: 1 !important;
+    }
+
     div[data-baseweb="select"] > div,
     div[data-testid="stRadio"] > div,
     div[data-testid="stSlider"] > div {
@@ -402,8 +413,10 @@ def _inject_styles() -> None:
         color: var(--muted);
     }
 
-    div[data-testid="stCaptionContainer"] {
+    div[data-testid="stCaptionContainer"],
+    div[data-testid="stCaptionContainer"] * {
         color: var(--muted);
+        opacity: 1;
     }
 
     .results-grid {
@@ -437,6 +450,19 @@ def _inject_styles() -> None:
     button[kind="secondary"]:hover {
         background: #ede8de;
         border-color: rgba(34, 37, 43, 0.22);
+    }
+
+    div[data-testid="stDownloadButton"] button,
+    div[data-testid="stDownloadButton"] button:hover {
+        background: #f8f6f1 !important;
+        color: var(--ink) !important;
+        border: 1px solid rgba(34, 37, 43, 0.14) !important;
+        box-shadow: none !important;
+    }
+
+    div[data-testid="stDownloadButton"] button * {
+        color: var(--ink) !important;
+        opacity: 1 !important;
     }
 
     .results-shell {
@@ -562,9 +588,9 @@ def _render_control_label(label: str) -> None:
 def _render_stat_card(label: str, value: str) -> None:
     st.markdown(
         f"""
-        <div class="stat-card">
-            <div class="stat-label">{escape(label)}</div>
-            <div class="stat-value">{escape(value)}</div>
+        <div class="stat-card" style="background: rgba(255, 255, 252, 0.96); border: 1px solid rgba(34, 37, 43, 0.08); border-radius: 18px; padding: 1rem 1rem 1.1rem; min-height: 6.75rem;">
+            <div class="stat-label" style="font-family: 'Urbanist', 'Segoe UI', sans-serif; color: #6e695f; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; font-weight: 700; margin-bottom: 0.8rem; opacity: 1;">{escape(label)}</div>
+            <div class="stat-value" style="color: #22252b; font-family: 'Gelasio', 'Georgia', serif; font-size: 2.1rem; line-height: 1.05; opacity: 1;">{escape(value)}</div>
         </div>
         """,
         unsafe_allow_html=True,
