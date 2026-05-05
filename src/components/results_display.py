@@ -121,20 +121,6 @@ def _create_chart(
         borrowing_rows.insert(
             0,
             {
-                "x": 0.0,
-                "y": _safe_float(
-                    borrowing_rate
-                    if borrowing_rate is not None
-                    else lending_rate
-                ),
-                "Category": "Borrowing Capital Market Line",
-                "MarkType": "line",
-                "Label": "",
-            },
-        )
-        borrowing_rows.insert(
-            1,
-            {
                 "x": t_vol,
                 "y": t_ret,
                 "Category": "Borrowing Capital Market Line",
