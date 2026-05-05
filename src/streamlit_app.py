@@ -529,89 +529,85 @@ _render_section_header(
     "Keep the two source files and the model assumptions in view together, then run one solve to unlock the final allocation workflow.",
 )
 
-upload_col, solve_col = st.columns([1.1, 0.9], gap="large")
-
-with upload_col:
-    with st.container(border=True):
-        _render_card_intro(
-            "Step 1A",
-            "Price history",
-            "Upload one CSV with a date column followed by one column per ticker.",
-        )
-        if _render_sample_disclosure("show_price_sample"):
-            st.code(
-                """date,AAPL,GOOG,MSFT
+with st.container(border=True):
+    _render_card_intro(
+        "Step 1A",
+        "Price history",
+        "Upload one CSV with a date column followed by one column per ticker.",
+    )
+    if _render_sample_disclosure("show_price_sample"):
+        st.code(
+            """date,AAPL,GOOG,MSFT
 2023-01-31,150.23,105.44,280.50
 2023-02-28,152.11,108.22,285.33""",
-                language="csv",
-            )
-        prices_file = st.file_uploader(
-            "Choose prices.csv",
-            type=["csv"],
-            key="prices_upload",
+            language="csv",
         )
-        if prices_file is not None:
-            _render_file_ready(
-                "Price file loaded",
-                f"{prices_file.name} is ready for covariance construction.",
-            )
+    prices_file = st.file_uploader(
+        "Choose prices.csv",
+        type=["csv"],
+        key="prices_upload",
+    )
+    if prices_file is not None:
+        _render_file_ready(
+            "Price file loaded",
+            f"{prices_file.name} is ready for covariance construction.",
+        )
 
-    with st.container(border=True):
-        _render_card_intro(
-            "Step 1B",
-            "Asset metrics",
-            "Upload the expected return, implied volatility, and optional weight bounds.",
-        )
-        if _render_sample_disclosure("show_metrics_sample"):
-            st.code(
-                """ticker,expected_return,implied_volatility,min_weight,max_weight
+with st.container(border=True):
+    _render_card_intro(
+        "Step 1B",
+        "Asset metrics",
+        "Upload the expected return, implied volatility, and optional weight bounds.",
+    )
+    if _render_sample_disclosure("show_metrics_sample"):
+        st.code(
+            """ticker,expected_return,implied_volatility,min_weight,max_weight
 AAPL,0.12,0.25,0.0,1.0
 GOOG,0.15,0.28,0.0,1.0""",
-                language="csv",
-            )
-        metrics_file = st.file_uploader(
-            "Choose metrics.csv",
-            type=["csv"],
-            key="metrics_upload",
+            language="csv",
         )
-        if metrics_file is not None:
-            _render_file_ready(
-                "Metrics file loaded",
-                f"{metrics_file.name} is ready for returns, volatility, and bounds.",
-            )
-
-with solve_col:
-    with st.container(border=True):
-        _render_card_intro(
-            "Step 2",
-            "Assumptions and solve",
-            "Set the risk-free rate and risk model, then build the tangency portfolio.",
-        )
-        lending_rate_pct = st.slider(
-            "Risk-free rate (%)",
-            min_value=0.0,
-            max_value=10.0,
-            value=float(st.session_state.lending_rate * 100.0),
-            step=0.25,
-            format="%.2f%%",
-        )
-        lending_rate = lending_rate_pct / 100.0
-
-        risk_model_label = st.radio(
-            "Risk model",
-            ["Forward-Looking", "Historical"],
-            index=0
-            if st.session_state.risk_model_label == "Forward-Looking"
-            else 1,
-            horizontal=True,
+    metrics_file = st.file_uploader(
+        "Choose metrics.csv",
+        type=["csv"],
+        key="metrics_upload",
+    )
+    if metrics_file is not None:
+        _render_file_ready(
+            "Metrics file loaded",
+            f"{metrics_file.name} is ready for returns, volatility, and bounds.",
         )
 
-        risk_model = (
-            RiskModel.FORWARD_LOOKING
-            if risk_model_label == "Forward-Looking"
-            else RiskModel.HISTORICAL
-        )
-        st.caption(_risk_model_note(risk_model))
+with st.container(border=True):
+    _render_card_intro(
+        "Step 2",
+        "Assumptions and solve",
+        "Set the risk-free rate and risk model, then build the tangency portfolio.",
+    )
+    lending_rate_pct = st.slider(
+        "Risk-free rate (%)",
+        min_value=0.0,
+        max_value=10.0,
+        value=float(st.session_state.lending_rate * 100.0),
+        step=0.25,
+        format="%.2f%%",
+    )
+    lending_rate = lending_rate_pct / 100.0
+
+    risk_model_label = st.radio(
+        "Risk model",
+        ["Forward-Looking", "Historical"],
+        index=0
+        if st.session_state.risk_model_label == "Forward-Looking"
+        else 1,
+        horizontal=True,
+    )
+
+    risk_model = (
+        RiskModel.FORWARD_LOOKING
+        if risk_model_label == "Forward-Looking"
+        else RiskModel.HISTORICAL
+    )
+    st.caption(_risk_model_note(risk_model))
 
 prices_name = _file_name(prices_file)
 metrics_name = _file_name(metrics_file)
@@ -654,30 +650,29 @@ with stage_placeholder.container():
         optimization_complete=solve_complete,
     )
 
-with solve_col:
-    with st.container(border=True):
-        _render_card_intro(
-            "Status",
-            "Current workflow state",
-            "The screen stays in one place while the messaging adapts to what you still need to do next.",
+with st.container(border=True):
+    _render_card_intro(
+        "Status",
+        "Current workflow state",
+        "The screen stays in one place while the messaging adapts to what you still need to do next.",
+    )
+    if files_ready:
+        st.markdown(
+            f"<div class='inline-note'>{escape(build_run_summary(prices_name, metrics_name, lending_rate=lending_rate, borrowing_rate=lending_rate, risk_model_label=risk_model_label))}</div>",
+            unsafe_allow_html=True,
         )
-        if files_ready:
-            st.markdown(
-                f"<div class='inline-note'>{escape(build_run_summary(prices_name, metrics_name, lending_rate=lending_rate, borrowing_rate=lending_rate, risk_model_label=risk_model_label))}</div>",
-                unsafe_allow_html=True,
-            )
-        _render_status_card(
-            setup_status.title,
-            setup_status.message,
-            setup_status.tone,
-        )
-        st.markdown("<div style='height: 0.8rem;'></div>", unsafe_allow_html=True)
-        optimize_button = st.button(
-            "Solve risky portfolio",
-            type="primary",
-            use_container_width=True,
-            disabled=not setup_status.ready_to_solve,
-        )
+    _render_status_card(
+        setup_status.title,
+        setup_status.message,
+        setup_status.tone,
+    )
+    st.markdown("<div style='height: 0.8rem;'></div>", unsafe_allow_html=True)
+    optimize_button = st.button(
+        "Solve risky portfolio",
+        type="primary",
+        use_container_width=True,
+        disabled=not setup_status.ready_to_solve,
+    )
 
 if optimize_button:
     with st.spinner("Solving portfolio and generating the capital market line..."):
@@ -752,15 +747,15 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
     max_vol_pct = float(tangency["volatility"]) * 100.0
     default_target_pct = min(10.0, max_vol_pct)
     current_borrowing_pct = max(
-        max_vol_pct * 0.0 + lending_rate_pct,
+        lending_rate_pct,
         float(st.session_state.borrowing_rate * 100.0),
     )
 
     with st.container(border=True):
         _render_card_intro(
             "Step 3B",
-            "Target volatility",
-            "Move along the Capital Market Line. Above the tangency portfolio, the borrowing rate defines the kinked segment.",
+            "Capital Market Line controls",
+            "Set the target volatility and rates that together determine where the portfolio sits on the Capital Market Line.",
         )
         tangency_vol_pct = float(tangency["volatility"]) * 100.0
         max_target_vol_pct = tangency_vol_pct * 2.0
@@ -773,6 +768,24 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
             format="%.1f%%",
             help="Below the tangency portfolio you are on the lending segment. Above it you move onto the borrowing segment.",
         )
+        rate_col_a, rate_col_b = st.columns(2, gap="large")
+        with rate_col_a:
+            _render_metric_card(
+                "Lending rate",
+                _fmt_pct(st.session_state.lending_rate),
+            )
+        with rate_col_b:
+            borrowing_rate_pct = st.slider(
+                "Borrowing rate (%)",
+                min_value=lending_rate_pct,
+                max_value=15.0,
+                value=max(lending_rate_pct, current_borrowing_pct),
+                step=0.25,
+                format="%.2f%%",
+                help="Equal lending and borrowing rates produce a straight Capital Market Line.",
+            )
+        borrowing_rate = borrowing_rate_pct / 100.0
+        st.session_state.borrowing_rate = borrowing_rate
         if target_vol_pct <= tangency_vol_pct + 1e-8:
             _render_status_card(
                 "Lending portfolio",
@@ -790,10 +803,7 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
         tangency_portfolio=tangency,
         target_volatility=target_vol_pct / 100.0,
         risk_free_rate=st.session_state.lending_rate,
-        borrowing_rate=max(
-            st.session_state.lending_rate,
-            current_borrowing_pct / 100.0,
-        ),
+        borrowing_rate=borrowing_rate,
     )
 
     with st.container(border=True):
@@ -827,30 +837,6 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
                 financing_value,
             )
 
-    with st.container(border=True):
-        _render_card_intro(
-            "Step 3D",
-            "Lending / borrowing rates (%)",
-            "The lending rate comes from the assumptions above. Adjust the borrowing rate here to see how the borrowing segment bends beyond the tangency portfolio.",
-        )
-        rate_col_a, rate_col_b = st.columns([0.8, 1.2], gap="large")
-        with rate_col_a:
-            _render_metric_card(
-                "Lending rate",
-                _fmt_pct(st.session_state.lending_rate),
-            )
-        with rate_col_b:
-            borrowing_rate_pct = st.slider(
-                "Borrowing rate (%)",
-                min_value=lending_rate_pct,
-                max_value=15.0,
-                value=max(lending_rate_pct, current_borrowing_pct),
-                step=0.25,
-                format="%.2f%%",
-                help="Equal lending and borrowing rates produce a straight Capital Market Line.",
-            )
-        borrowing_rate = borrowing_rate_pct / 100.0
-        st.session_state.borrowing_rate = borrowing_rate
 
     cml_points = generate_cml(
         tangency_portfolio=tangency,

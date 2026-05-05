@@ -22,48 +22,20 @@ def render_results(
     alloc_df = _create_allocation_df(final_portfolio, tangency)
     position_summary = _build_position_summary(final_portfolio)
 
-    chart_col, summary_col = st.columns([1.95, 0.95], gap="large")
+    st.markdown("#### Capital Market Line")
+    st.caption(
+        "The lending line starts at the lending rate. When borrowing applies, "
+        "the borrowing line starts at the borrowing rate and meets the tangency portfolio."
+    )
+    chart = _create_chart(
+        tangency,
+        final_portfolio,
+        cml_points,
+        lending_rate,
+        borrowing_rate=borrowing_rate,
+    )
+    st.altair_chart(chart, use_container_width=True, theme=None)
 
-    with chart_col:
-        st.markdown("#### Capital Market Line")
-        st.caption(
-            "The lending line starts at the lending rate. When borrowing applies, the borrowing line starts at the borrowing rate and meets the tangency portfolio."
-        )
-        chart = _create_chart(
-            tangency,
-            final_portfolio,
-            cml_points,
-            lending_rate,
-            borrowing_rate=borrowing_rate,
-        )
-        st.altair_chart(chart, use_container_width=True, theme=None)
-
-    with summary_col:
-        st.markdown("#### Final allocation")
-        st.caption(
-            "The final portfolio is the tangency portfolio scaled along the Capital Market Line."
-        )
-        allocation_chart = _create_allocation_chart(alloc_df)
-        st.altair_chart(allocation_chart, use_container_width=True, theme=None)
-        st.markdown(
-            f"""
-            <div style="
-                background: rgba(22, 108, 89, 0.08);
-                border: 1px solid rgba(22, 108, 89, 0.14);
-                border-radius: 18px;
-                padding: 1rem 1rem 0.95rem;
-                color: #355247;
-                line-height: 1.6;
-                margin-top: 0.4rem;
-            ">
-                <strong style="display:block; color:#1f3b32; margin-bottom:0.2rem;">Position summary</strong>
-                {position_summary}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    # Download Results Button
     csv_data = _create_results_csv(final_portfolio, tangency)
     st.download_button(
         label="Download results (CSV)",
@@ -73,7 +45,29 @@ def render_results(
         use_container_width=True,
     )
 
-    st.markdown("#### Final allocation breakdown")
+    st.markdown("#### Final allocation")
+    st.caption(
+        "The final portfolio is the tangency portfolio scaled along the Capital Market Line."
+    )
+    st.markdown(
+        f"""
+        <div style="
+            background: rgba(22, 108, 89, 0.08);
+            border: 1px solid rgba(22, 108, 89, 0.14);
+            border-radius: 18px;
+            padding: 1rem 1rem 0.95rem;
+            color: #355247;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+        ">
+            <strong style="display:block; color:#1f3b32; margin-bottom:0.2rem;">Position summary</strong>
+            {position_summary}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    allocation_chart = _create_allocation_chart(alloc_df)
+    st.altair_chart(allocation_chart, use_container_width=True, theme=None)
     _render_allocation_table(alloc_df)
 
 
