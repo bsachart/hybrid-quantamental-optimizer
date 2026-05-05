@@ -767,38 +767,38 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
         )
         tangency_vol_pct = float(tangency["volatility"]) * 100.0
         max_target_vol_pct = tangency_vol_pct * 2.0
-        target_vol_pct = st.slider(
-            "Target portfolio volatility (%)",
-            min_value=0.0,
-            max_value=max_target_vol_pct,
-            value=default_target_pct,
-            step=0.1,
-            format="%.1f%%",
-            help="Below the tangency portfolio you are on the lending segment. Above it you move onto the borrowing segment.",
-        )
-        rate_col_a, rate_col_b = st.columns(2, gap="large")
-        with rate_col_a:
-            st.slider(
-                "Lending rate (%)",
+        
+        control_col_a, control_col_b = st.columns(2, gap="large")
+        
+        with control_col_a:
+            target_vol_pct = st.slider(
+                "Target portfolio volatility (%)",
+                min_value=0.0,
+                max_value=max_target_vol_pct,
+                value=default_target_pct,
+                step=0.1,
+                format="%.1f%%",
+                help="Below the tangency portfolio you are on the lending segment. Above it you move onto the borrowing segment.",
+            )
+            
+        with control_col_b:
+            current_borrowing_pct = float(st.session_state.borrowing_rate * 100.0)
+            
+            lending_rate_pct, borrowing_rate_pct = st.slider(
+                "Rates (Lending & Borrowing) (%)",
                 min_value=0.0,
                 max_value=15.0,
-                value=lending_rate_pct,
+                value=(
+                    float(st.session_state.lending_rate * 100.0),
+                    float(max(st.session_state.lending_rate * 100.0, current_borrowing_pct))
+                ),
                 step=0.25,
                 format="%.2f%%",
-                disabled=True,
-                help="The lending rate is fixed from your assumptions in Step 2.",
+                help="The lower point is the lending rate (cash yield). The upper point is the borrowing rate (leverage cost).",
             )
-        with rate_col_b:
-            borrowing_rate_pct = st.slider(
-                "Borrowing rate (%)",
-                min_value=lending_rate_pct,
-                max_value=15.0,
-                value=max(lending_rate_pct, current_borrowing_pct),
-                step=0.25,
-                format="%.2f%%",
-                help="Equal lending and borrowing rates produce a straight Capital Market Line.",
-            )
+        
         borrowing_rate = borrowing_rate_pct / 100.0
+        st.session_state.lending_rate = lending_rate_pct / 100.0
         st.session_state.borrowing_rate = borrowing_rate
         if target_vol_pct <= tangency_vol_pct + 1e-8:
             _render_status_card(
