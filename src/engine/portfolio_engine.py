@@ -86,18 +86,22 @@ def target_portfolio(
     tangency_portfolio: LabeledPortfolioMetrics,
     target_volatility: Union[float, List[float]],
     risk_free_rate: float,
+    borrowing_rate: Optional[float] = None,
 ) -> Union[LabeledPortfolioMetrics, List[LabeledPortfolioMetrics]]:
     """Scale the tangency portfolio along the capital market line."""
     return scale_portfolio_to_target_volatility(
         tangency_portfolio=tangency_portfolio,
         target_volatility=target_volatility,
         risk_free_rate=risk_free_rate,
+        borrowing_rate=borrowing_rate,
     )
 
 
 def generate_cml(
     tangency_portfolio: LabeledPortfolioMetrics,
     risk_free_rate: float,
+    borrowing_rate: Optional[float] = None,
+    max_volatility: Optional[float] = None,
     vol_step: float = 0.01,
     num_points: Optional[int] = None,
 ) -> List[LabeledPortfolioMetrics]:
@@ -105,6 +109,8 @@ def generate_cml(
     return generate_cml_portfolios(
         tangency_portfolio=tangency_portfolio,
         risk_free_rate=risk_free_rate,
+        borrowing_rate=borrowing_rate,
+        max_volatility=max_volatility,
         vol_step=vol_step,
         num_points=num_points,
     )

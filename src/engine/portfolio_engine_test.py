@@ -186,8 +186,10 @@ def test_efficient_frontier_list_input(mock_prices, mock_metrics):
     assert frontier[2]["tickers"] == ["A", "B"]
 
 
-def test_target_portfolio_caps_above_tangency_volatility(mock_prices, mock_metrics):
-    """Requests above tangency should not introduce leverage."""
+def test_target_portfolio_caps_above_tangency_volatility_without_borrowing_rate(
+    mock_prices, mock_metrics
+):
+    """Requests above tangency should still cap when no borrowing rate is set."""
     tangency = optimize_portfolio(
         mock_prices,
         mock_metrics,
@@ -205,6 +207,28 @@ def test_target_portfolio_caps_above_tangency_volatility(mock_prices, mock_metri
     assert np.isclose(final["cash_weight"], 0.0)
     assert np.isclose(final["expected_return"], tangency["expected_return"])
     assert np.isclose(final["sharpe_ratio"], tangency["sharpe_ratio"])
+
+
+def test_target_portfolio_supports_borrowing_rate_above_tangency(
+    mock_prices, mock_metrics
+):
+    tangency = optimize_portfolio(
+        mock_prices,
+        mock_metrics,
+        risk_model=RiskModel.FORWARD_LOOKING,
+        risk_free_rate=0.04,
+    )
+
+    final = target_portfolio(
+        tangency,
+        target_volatility=tangency["volatility"] * 1.5,
+        risk_free_rate=0.04,
+        borrowing_rate=0.06,
+    )
+
+    assert np.isclose(final["volatility"], tangency["volatility"] * 1.5)
+    assert np.isclose(final["cash_weight"], -0.5)
+    assert np.isclose(np.sum(final["weights"]) + final["cash_weight"], 1.0)
 
 
 def test_generate_cml_default_step(mock_prices, mock_metrics):
@@ -276,3 +300,23 @@ def test_generate_cml_num_points_override(mock_prices, mock_metrics):
     assert np.isclose(cml[0]["volatility"], 0.0)
     # Last point = Tangency
     assert np.isclose(cml[-1]["volatility"], tangency["volatility"])
+
+
+def test_generate_cml_supports_borrowing_segment(mock_prices, mock_metrics):
+    tangency = optimize_portfolio(
+        mock_prices,
+        mock_metrics,
+        risk_model=RiskModel.FORWARD_LOOKING,
+        risk_free_rate=0.04,
+    )
+
+    cml = generate_cml(
+        tangency,
+        risk_free_rate=0.04,
+        borrowing_rate=0.06,
+        max_volatility=tangency["volatility"] * 2.0,
+        num_points=7,
+    )
+
+    assert np.isclose(cml[-1]["volatility"], tangency["volatility"] * 2.0)
+    assert cml[-1]["cash_weight"] < 0.0

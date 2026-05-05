@@ -42,16 +42,25 @@ def scale_portfolio_to_target_volatility(
     tangency_portfolio: LabeledPortfolioMetrics,
     target_volatility: Union[float, List[float]],
     risk_free_rate: float,
+    borrowing_rate: Optional[float] = None,
 ) -> Union[LabeledPortfolioMetrics, List[LabeledPortfolioMetrics]]:
     """Scale a tangency portfolio along the capital market line."""
     if isinstance(target_volatility, list):
         return [
-            _scale_single_target_volatility(tangency_portfolio, target, risk_free_rate)
+            _scale_single_target_volatility(
+                tangency_portfolio,
+                target,
+                risk_free_rate,
+                borrowing_rate=borrowing_rate,
+            )
             for target in target_volatility
         ]
 
     return _scale_single_target_volatility(
-        tangency_portfolio, float(target_volatility), risk_free_rate
+        tangency_portfolio,
+        float(target_volatility),
+        risk_free_rate,
+        borrowing_rate=borrowing_rate,
     )
 
 
@@ -74,15 +83,27 @@ def generate_target_volatility_series(
 def generate_cml_portfolios(
     tangency_portfolio: LabeledPortfolioMetrics,
     risk_free_rate: float,
+    borrowing_rate: Optional[float] = None,
+    max_volatility: Optional[float] = None,
     vol_step: float = 0.01,
     num_points: Optional[int] = None,
 ) -> List[LabeledPortfolioMetrics]:
-    """Generate labeled portfolios from zero volatility to the tangency point."""
+    """Generate labeled portfolios along the capital market line."""
+    max_target = (
+        tangency_portfolio["volatility"]
+        if max_volatility is None
+        else float(max_volatility)
+    )
     targets = generate_target_volatility_series(
-        tangency_portfolio["volatility"], vol_step=vol_step, num_points=num_points
+        max_target,
+        vol_step=vol_step,
+        num_points=num_points,
     )
     return scale_portfolio_to_target_volatility(
-        tangency_portfolio, targets, risk_free_rate
+        tangency_portfolio,
+        targets,
+        risk_free_rate,
+        borrowing_rate=borrowing_rate,
     )
 
 
@@ -106,27 +127,43 @@ def _scale_single_target_volatility(
     tangency_portfolio: LabeledPortfolioMetrics,
     target_volatility: float,
     risk_free_rate: float,
+    borrowing_rate: Optional[float] = None,
 ) -> LabeledPortfolioMetrics:
+    if borrowing_rate is not None and borrowing_rate < risk_free_rate:
+        raise ValueError(
+            "borrowing_rate must be greater than or equal to risk_free_rate"
+        )
+
     tangency_volatility = tangency_portfolio["volatility"]
     if tangency_volatility < ZERO_VOLATILITY_EPSILON:
         return create_cash_portfolio(tangency_portfolio, risk_free_rate)
 
-    ratio = min(target_volatility / tangency_volatility, 1.0)
+    ratio = target_volatility / tangency_volatility
+    if borrowing_rate is None:
+        ratio = min(ratio, 1.0)
+
     if ratio <= ZERO_VOLATILITY_EPSILON:
         return create_cash_portfolio(tangency_portfolio, risk_free_rate)
+
+    financing_rate = risk_free_rate
+    if ratio > 1.0 and borrowing_rate is not None:
+        financing_rate = borrowing_rate
 
     cash_weight = 1.0 - ratio
     scaled_volatility = tangency_volatility * ratio
     scaled_return = (
         tangency_portfolio["expected_return"] * ratio
-        + risk_free_rate * cash_weight
+        + financing_rate * cash_weight
     )
+    sharpe_ratio = 0.0
+    if scaled_volatility > ZERO_VOLATILITY_EPSILON:
+        sharpe_ratio = (scaled_return - financing_rate) / scaled_volatility
 
     return {
         "weights": tangency_portfolio["weights"] * ratio,
         "expected_return": scaled_return,
         "volatility": scaled_volatility,
-        "sharpe_ratio": tangency_portfolio["sharpe_ratio"],
+        "sharpe_ratio": sharpe_ratio,
         "cash_weight": cash_weight,
         "tickers": tangency_portfolio["tickers"],
         "asset_returns": tangency_portfolio["asset_returns"],

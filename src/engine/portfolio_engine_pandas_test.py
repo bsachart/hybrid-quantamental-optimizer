@@ -56,3 +56,22 @@ def test_pandas_target_portfolio_scaling():
     assert np.isclose(final["cash_weight"], 0.5)
     assert np.isclose(np.sum(final["weights"]) + final["cash_weight"], 1.0)
     assert np.isclose(final["sharpe_ratio"], tangency["sharpe_ratio"])
+
+
+def test_pandas_target_portfolio_supports_borrowing_segment():
+    tangency = optimize_portfolio(
+        price_source=mock_prices(),
+        metric_source=mock_metrics(),
+        risk_model=RiskModel.FORWARD_LOOKING,
+        risk_free_rate=0.02,
+    )
+
+    final = target_portfolio(
+        tangency_portfolio=tangency,
+        target_volatility=tangency["volatility"] * 1.5,
+        risk_free_rate=0.02,
+        borrowing_rate=0.04,
+    )
+
+    assert np.isclose(final["cash_weight"], -0.5)
+    assert np.isclose(np.sum(final["weights"]) + final["cash_weight"], 1.0)

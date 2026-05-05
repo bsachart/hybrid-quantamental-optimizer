@@ -16,26 +16,32 @@ def render_results(
     tangency: Dict,
     final_portfolio: Dict,
     cml_points: List[Dict],
-    rf_rate: float,
+    lending_rate: float,
+    borrowing_rate: float | None = None,
 ):
     alloc_df = _create_allocation_df(final_portfolio, tangency)
-    risky_pct = (1 - _safe_float(final_portfolio.get("cash_weight"))) * 100
-    cash_pct = _safe_float(final_portfolio.get("cash_weight")) * 100
+    position_summary = _build_position_summary(final_portfolio)
 
-    chart_col, summary_col = st.columns([1.65, 1], gap="large")
+    chart_col, summary_col = st.columns([1.95, 0.95], gap="large")
 
     with chart_col:
-        st.markdown("#### Risk / return map")
+        st.markdown("#### Capital Market Line")
         st.caption(
-            "The frontier shows the feasible risky mix. The dashed line shows the capital market line from cash to the tangency portfolio."
+            "The lending line starts at the lending rate. When borrowing applies, the borrowing line starts at the borrowing rate and meets the tangency portfolio."
         )
-        chart = _create_chart(tangency, final_portfolio, cml_points, rf_rate)
+        chart = _create_chart(
+            tangency,
+            final_portfolio,
+            cml_points,
+            lending_rate,
+            borrowing_rate=borrowing_rate,
+        )
         st.altair_chart(chart, use_container_width=True, theme=None)
 
     with summary_col:
-        st.markdown("#### Allocation mix")
+        st.markdown("#### Final allocation")
         st.caption(
-            "The final portfolio is the tangency portfolio scaled to your target volatility."
+            "The final portfolio is the tangency portfolio scaled along the Capital Market Line."
         )
         allocation_chart = _create_allocation_chart(alloc_df)
         st.altair_chart(allocation_chart, use_container_width=True, theme=None)
@@ -50,9 +56,8 @@ def render_results(
                 line-height: 1.6;
                 margin-top: 0.4rem;
             ">
-                <strong style="display:block; color:#1f3b32; margin-bottom:0.2rem;">Allocation readout</strong>
-                {risky_pct:.1f}% sits in the optimized risky mix and {cash_pct:.1f}% remains in cash
-                to land on a {_safe_float(final_portfolio.get('volatility')):.1%} risk target.
+                <strong style="display:block; color:#1f3b32; margin-bottom:0.2rem;">Position summary</strong>
+                {position_summary}
             </div>
             """,
             unsafe_allow_html=True,
@@ -89,7 +94,8 @@ def _create_chart(
     tangency: Dict,
     final_portfolio: Dict,
     cml_points: List[Dict],
-    rf_rate: float,
+    lending_rate: float,
+    borrowing_rate: float | None = None,
 ) -> alt.Chart:
     """
     Create chart using a unified data model.
@@ -99,38 +105,51 @@ def _create_chart(
     """
     t_vol = _safe_float(tangency.get("volatility"))
     t_ret = _safe_float(tangency.get("expected_return"))
-    rf = _safe_float(rf_rate)
 
-    # --- BUILD UNIFIED DATA ---
-    rows = []
-
-    # 1. Efficient Frontier (line)
+    lending_rows = []
+    borrowing_rows = []
     for p in cml_points:
-        rows.append(
+        row = {
+            "x": _safe_float(p.get("volatility")),
+            "y": _safe_float(p.get("expected_return")),
+            "MarkType": "line",
+            "Label": "",
+        }
+        if _safe_float(p.get("cash_weight")) < -1e-8:
+            row["Category"] = "Borrowing Capital Market Line"
+            borrowing_rows.append(row)
+        else:
+            row["Category"] = "Lending Capital Market Line"
+            lending_rows.append(row)
+
+    rows = lending_rows.copy()
+    if borrowing_rows:
+        borrowing_rows.insert(
+            0,
             {
-                "x": _safe_float(p.get("volatility")),
-                "y": _safe_float(p.get("expected_return")),
-                "Category": "Efficient Frontier",
+                "x": 0.0,
+                "y": _safe_float(
+                    borrowing_rate
+                    if borrowing_rate is not None
+                    else lending_rate
+                ),
+                "Category": "Borrowing Capital Market Line",
                 "MarkType": "line",
                 "Label": "",
-            }
+            },
         )
+        borrowing_rows.insert(
+            1,
+            {
+                "x": t_vol,
+                "y": t_ret,
+                "Category": "Borrowing Capital Market Line",
+                "MarkType": "line",
+                "Label": "",
+            },
+        )
+        rows.extend(borrowing_rows)
 
-    # 2. CML - Capital Market Line (line from RF to Tangency)
-    rows.append(
-        {"x": 0.0, "y": rf, "Category": "CML", "MarkType": "line", "Label": "Risk Free"}
-    )
-    rows.append(
-        {
-            "x": t_vol,
-            "y": t_ret,
-            "Category": "CML",
-            "MarkType": "line",
-            "Label": "Tangency",
-        }
-    )
-
-    # 3. Individual Assets (points)
     tickers = tangency.get("tickers", [])
     asset_rets = tangency.get("asset_returns", [])
     asset_vols = tangency.get("asset_vols", [])
@@ -147,25 +166,23 @@ def _create_chart(
                 }
             )
 
-    # 4. Max Sharpe Portfolio (special point)
     rows.append(
         {
             "x": t_vol,
             "y": t_ret,
-            "Category": "Max Sharpe",
+            "Category": "Tangency Portfolio",
             "MarkType": "point",
-            "Label": "Max Sharpe",
+            "Label": "Tangency Portfolio",
         }
     )
 
-    # 5. Target Portfolio (special point)
     rows.append(
         {
             "x": _safe_float(final_portfolio.get("volatility")),
             "y": _safe_float(final_portfolio.get("expected_return")),
-            "Category": "Target Portfolio",
+            "Category": "Final Portfolio",
             "MarkType": "point",
-            "Label": "Target",
+            "Label": "Final Portfolio",
         }
     )
 
@@ -180,11 +197,11 @@ def _create_chart(
     # --- CHART CONFIGURATION ---
     color_scale = alt.Scale(
         domain=[
-            "Efficient Frontier",
-            "CML",
+            "Lending Capital Market Line",
+            "Borrowing Capital Market Line",
             "Assets",
-            "Max Sharpe",
-            "Target Portfolio",
+            "Tangency Portfolio",
+            "Final Portfolio",
         ],
         range=["#166c59", "#c76b3f", "#6d8391", "#0f4d40", "#d7aa4b"],
     )
@@ -192,7 +209,7 @@ def _create_chart(
     x_axis = alt.X(
         "x:Q",
         title="Volatility (Risk)",
-        scale=alt.Scale(nice=True, zero=False, padding=12),
+        scale=alt.Scale(nice=True, zero=True, domainMin=0, padding=12),
         axis=alt.Axis(
             format="%",
             labelColor="#6e6a63",
@@ -216,16 +233,13 @@ def _create_chart(
         ),
     )
 
-    # --- LAYER 1: LINES ---
     df_lines = df[df["MarkType"] == "line"].copy()
 
     layers = []
 
-    # Frontier line
-    df_frontier = df_lines[df_lines["Category"] == "Efficient Frontier"]
-    if len(df_frontier) >= 2:
-        frontier = (
-            alt.Chart(df_frontier)
+    if len(df_lines) >= 2:
+        cml = (
+            alt.Chart(df_lines)
             .mark_line(size=3)
             .encode(
                 x=x_axis,
@@ -234,30 +248,30 @@ def _create_chart(
                     "Category:N",
                     scale=color_scale,
                     legend=alt.Legend(
-                        title="Series", labelColor="#4d4b46", titleColor="#22252b"
+                        title="Series",
+                        orient="top",
+                        direction="horizontal",
+                        columns=2,
+                        labelColor="#4d4b46",
+                        titleColor="#22252b",
                     ),
                 ),
-                order="x:Q",
-            )
-        )
-        layers.append(frontier)
-
-    # CML line (dashed)
-    df_cml = df_lines[df_lines["Category"] == "CML"]
-    if len(df_cml) >= 2:
-        cml = (
-            alt.Chart(df_cml)
-            .mark_line(size=2, strokeDash=[5, 5])
-            .encode(
-                x=x_axis,
-                y=y_axis,
-                color=alt.Color("Category:N", scale=color_scale),
+                strokeDash=alt.StrokeDash(
+                    "Category:N",
+                    scale=alt.Scale(
+                        domain=[
+                            "Lending Capital Market Line",
+                            "Borrowing Capital Market Line",
+                        ],
+                        range=[[1, 0], [6, 4]],
+                    ),
+                    legend=None,
+                ),
                 order="x:Q",
             )
         )
         layers.append(cml)
 
-    # --- LAYER 2: POINTS ---
     df_points = df[df["MarkType"] == "point"].copy()
 
     # Assets (circles)
@@ -279,11 +293,10 @@ def _create_chart(
         )
         layers.append(assets)
 
-    # Max Sharpe (star)
-    df_sharpe = df_points[df_points["Category"] == "Max Sharpe"]
-    if not df_sharpe.empty:
-        sharpe = (
-            alt.Chart(df_sharpe)
+    df_tangency = df_points[df_points["Category"] == "Tangency Portfolio"]
+    if not df_tangency.empty:
+        tangency_point = (
+            alt.Chart(df_tangency)
             .mark_point(shape="cross", size=200, filled=True)
             .encode(
                 x=x_axis,
@@ -296,10 +309,9 @@ def _create_chart(
                 ],
             )
         )
-        layers.append(sharpe)
+        layers.append(tangency_point)
 
-    # Target Portfolio (diamond)
-    df_target = df_points[df_points["Category"] == "Target Portfolio"]
+    df_target = df_points[df_points["Category"] == "Final Portfolio"]
     if not df_target.empty:
         target = (
             alt.Chart(df_target)
@@ -322,7 +334,7 @@ def _create_chart(
 
     return (
         alt.layer(*layers)
-        .properties(height=400)
+        .properties(height=520)
         .configure(background="#fffdf9")
         .configure_view(stroke=None)
         .configure_axis(labelFont="Urbanist", titleFont="Urbanist")
@@ -340,7 +352,11 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
     if chart_df.empty:
         return alt.Chart(pd.DataFrame({"Asset": [], "Weight": []})).mark_bar()
     chart_df["Category"] = chart_df["Asset"].apply(
-        lambda asset: "Cash" if asset == "CASH" else "Risky assets"
+        lambda asset: (
+            "Cash"
+            if asset == "Cash"
+            else "Borrowing" if asset == "Borrowing" else "Risky assets"
+        )
     )
 
     return (
@@ -368,8 +384,8 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
             color=alt.Color(
                 "Category:N",
                 scale=alt.Scale(
-                    domain=["Risky assets", "Cash"],
-                    range=["#166c59", "#c76b3f"],
+                    domain=["Risky assets", "Cash", "Borrowing"],
+                    range=["#166c59", "#c76b3f", "#a44646"],
                 ),
                 legend=None,
             ),
@@ -405,7 +421,16 @@ def _create_allocation_df(
     if cash_w > 0.0001:
         rows.append(
             {
-                "Asset": "CASH",
+                "Asset": "Cash",
+                "Weight": cash_w,
+                "Expected Return": 0.0,
+                "Volatility": 0.0,
+            }
+        )
+    elif cash_w < -0.0001:
+        rows.append(
+            {
+                "Asset": "Borrowing",
                 "Weight": cash_w,
                 "Expected Return": 0.0,
                 "Volatility": 0.0,
@@ -469,7 +494,9 @@ def _create_results_csv(final_portfolio: Dict, tangency: Dict) -> str:
 
     cash_w = _safe_float(final_portfolio.get("cash_weight"))
     if cash_w > 0.0001:
-        rows.append(["CASH", f"{cash_w:.4f}", "0.0000", "0.0000"])
+        rows.append(["Cash", f"{cash_w:.4f}", "0.0000", "0.0000"])
+    elif cash_w < -0.0001:
+        rows.append(["Borrowing", f"{cash_w:.4f}", "0.0000", "0.0000"])
 
     weights = final_portfolio.get("weights", [])
     asset_returns = tangency.get("asset_returns", [])
@@ -571,3 +598,26 @@ def _render_allocation_table(alloc_df: pd.DataFrame) -> None:
     ).strip()
 
     st.html(table_html)
+
+
+def _build_position_summary(final_portfolio: Dict) -> str:
+    risky_weight = 0.0
+    for weight in final_portfolio.get("weights", []):
+        risky_weight += _safe_float(weight)
+
+    risky_pct = risky_weight * 100.0
+    cash_weight = _safe_float(final_portfolio.get("cash_weight"))
+
+    if cash_weight > 0.0001:
+        return (
+            f"{risky_pct:.1f}% is invested in the tangency portfolio and "
+            f"{cash_weight * 100.0:.1f}% stays at the lending rate."
+        )
+
+    if cash_weight < -0.0001:
+        return (
+            f"{risky_pct:.1f}% is invested in the tangency portfolio and "
+            f"{abs(cash_weight) * 100.0:.1f}% is financed at the borrowing rate."
+        )
+
+    return f"{risky_pct:.1f}% is invested in the tangency portfolio with no cash position."
