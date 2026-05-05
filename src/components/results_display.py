@@ -216,7 +216,7 @@ def _create_chart(
     y_axis = alt.Y(
         "y:Q",
         title="Expected Return",
-        scale=alt.Scale(nice=True, zero=False, padding=12),
+        scale=alt.Scale(nice=True, zero=True, padding=12),
         axis=alt.Axis(
             format="%",
             labelColor="#6e6a63",

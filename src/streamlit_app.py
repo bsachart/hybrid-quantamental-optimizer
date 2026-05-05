@@ -263,11 +263,15 @@ def _inject_styles() -> None:
     }
 
     div[data-testid="stFileUploaderDropzone"] {
-        background: rgba(248, 245, 239, 0.88);
-        border: 1.5px dashed rgba(27, 108, 92, 0.26);
+        background: rgba(248, 245, 239, 0.88) !important;
+        border: 1.5px dashed rgba(27, 108, 92, 0.26) !important;
         border-radius: 18px;
         padding-top: 1rem;
         padding-bottom: 1rem;
+    }
+
+    div[data-testid="stFileUploaderDropzone"] * {
+        color: var(--muted) !important;
     }
 
     div[data-testid="stWidgetLabel"] p,
@@ -815,7 +819,7 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
         financing_label, financing_value = _financing_metric(
             float(final_portfolio["cash_weight"])
         )
-        final_a, final_b, final_c, final_d = st.columns(4, gap="large")
+        final_a, final_b, final_c = st.columns(3, gap="large")
         with final_a:
             _render_metric_card(
                 "Expected return",
@@ -827,11 +831,6 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
                 _fmt_pct(float(final_portfolio["volatility"])),
             )
         with final_c:
-            _render_metric_card(
-                "Sharpe ratio",
-                f"{float(final_portfolio['sharpe_ratio']):.2f}",
-            )
-        with final_d:
             _render_metric_card(
                 financing_label,
                 financing_value,
