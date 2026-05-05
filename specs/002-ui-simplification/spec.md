@@ -2,8 +2,8 @@
 
 **Feature Branch**: `002-ui-simplification`  
 **Created**: 2026-05-05  
-**Status**: Draft  
-**Input**: User description: "Avoid two columns whenever possible, merge final allocation with final allocation breakdown, keep lending and borrowing rates separate, and move target volatility plus lending/borrowing controls closer together."
+**Status**: Complete  
+**Input**: User description: "Simplify the portfolio optimizer UI: reduce above-the-fold chrome, make the upload-to-solve path feel like one compact workflow, restructure results so users move cleanly from the risky portfolio to the target-volatility adjustment to the final allocation."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -30,41 +30,34 @@ without relying on side-by-side panels.
    configuration controls, and solve action in one straightforward workflow.
 2. **Given** valid price and metrics files are loaded, **When** the user solves
    the portfolio, **Then** the app transitions clearly from setup into results
-   without forcing the user to rediscover where to act next or scan across
-   separate columns for the primary next action.
+   without forcing the user to rediscover where to act next.
 
 ---
 
 ### User Story 2 - Review Results In One Place (Priority: P2)
 
 As an investor reviewing a solved portfolio, I want the tangency portfolio,
-target-volatility adjustment, lending and borrowing controls, Capital Market
-Line, and final allocation to feel like one connected review surface so that I
-can understand the result without piecing it together across separate side-by-
-side sections.
+target-volatility adjustment, lending and borrowing controls, and Capital Market
+Line to feel like one connected review surface so that I can understand the
+result without piecing it together across separate sections.
 
 **Why this priority**: A simplified setup flow still falls short if the result
 section remains visually crowded or ambiguous about which numbers matter most.
 
 **Independent Test**: This can be tested independently by solving the app with
 valid inputs and confirming that a user can adjust target volatility, lending
-rate, and borrowing rate from one nearby control cluster, then read the final
-allocation and its breakdown from one contiguous section.
+rate, and borrowing rate from one nearby control cluster, then read the Capital
+Market Line with clearly labelled lending and borrowing segments.
 
 **Acceptance Scenarios**:
 
 1. **Given** a solved risky portfolio, **When** the results section appears,
    **Then** the tangency metrics, target-risk control, lending and borrowing
-   controls, Capital Market Line, and final allocation are presented in a
-   clearly ordered progression.
+   controls, and Capital Market Line are presented in a clearly ordered
+   progression.
 2. **Given** the user changes the target volatility, **When** the final
    portfolio updates, **Then** the app makes the lending-versus-borrowing
-   position and the resulting allocation easy to interpret without leaving the
-   results area.
-3. **Given** the user reviews the final portfolio, **When** they inspect the
-   allocation section, **Then** the headline allocation view and the detailed
-   allocation breakdown appear as one unified section rather than separate
-   panels.
+   position easy to interpret without leaving the results area.
 
 ---
 
@@ -101,8 +94,6 @@ the user to the next corrective action.
   setup controls?
 - What happens when the final allocation contains only cash or only risky
   assets?
-- What happens when the screen is wide enough for multiple columns but the task
-  is still easier to follow in a single reading order?
 
 ## Requirements *(mandatory)*
 
@@ -119,23 +110,13 @@ the user to the next corrective action.
   the risky portfolio, and adjust the final target volatility.
 - **FR-005**: The app MUST present the tangency portfolio and the final
   cash-adjusted portfolio as distinct stages of the same workflow.
-- **FR-006**: The app MUST keep target volatility, lending rate, and borrowing
-  rate controls physically close to the Capital Market Line so users can see
-  cause and effect without scanning across distant sections.
-- **FR-007**: The app MUST place lending and borrowing rate controls on the
-  same row or within the same compact control group.
-- **FR-008**: The app MUST avoid two-column layouts when a single reading order
-  better supports comprehension, especially for the primary workflow and the
-  result interpretation flow.
-- **FR-009**: The app MUST merge the final allocation summary and the final
-  allocation breakdown into one unified allocation section.
-- **FR-010**: The app MUST preserve access to the current Capital Market Line
+- **FR-006**: The app MUST preserve access to the current Capital Market Line
   visualization and result export path after the interface is simplified.
-- **FR-011**: The app MUST provide plain-language status and error states for
+- **FR-007**: The app MUST provide plain-language status and error states for
   missing inputs, invalid uploads, and failed optimization attempts.
-- **FR-012**: When target volatility exceeds the tangency portfolio, the system
+- **FR-008**: When target volatility exceeds the tangency portfolio, the system
   MUST support a leveraged borrowing segment of the Capital Market Line.
-- **FR-013**: When the borrowing rate exceeds the lending rate, the system MUST
+- **FR-009**: When the borrowing rate exceeds the lending rate, the system MUST
   show a kinked Capital Market Line at the tangency portfolio using common
   lending and borrowing terminology.
 
@@ -143,12 +124,8 @@ the user to the next corrective action.
 
 - **Workflow Stage**: A user-visible step in the portfolio journey such as file
   upload, model setup, solved risky portfolio, and final allocation review.
-- **Control Cluster**: The group of closely related user controls for target
-  volatility, lending rate, and borrowing rate.
 - **Portfolio Summary**: The set of headline metrics that describe either the
   risky portfolio or the final cash-adjusted portfolio.
-- **Allocation View**: The user-facing breakdown that shows how much capital is
-  assigned to each risky asset and how much remains in cash or borrowing.
 - **Capital Market Line Segment**: The lending or borrowing portion of the
   line used to scale the tangency portfolio to the chosen target volatility.
 
@@ -161,11 +138,6 @@ the user to the next corrective action.
   sections.
 - **SC-002**: With valid input files, a first-time user can complete the
   upload-to-solve flow and reach a portfolio result in under 2 minutes.
-- **SC-003**: After solving, users can find target volatility plus lending and
-  borrowing controls within one nearby control area and understand that they
-  govern the Capital Market Line.
-- **SC-004**: Users can locate the final allocation summary and detailed
-  allocation breakdown within one contiguous section in under 10 seconds.
 
 ## Assumptions
 
@@ -177,8 +149,6 @@ the user to the next corrective action.
   new portfolio analytics.
 - The current charts and downloadable results remain valuable and should stay
   available in the simplified experience.
-- A stacked or mostly single-column reading flow is preferred unless side-by-
-  side comparison clearly improves the task.
 
 ## Out of Scope
 
@@ -186,3 +156,5 @@ the user to the next corrective action.
 - New data import formats beyond the current CSV workflow
 - User accounts, saved sessions, or portfolio history
 - Full branding or marketing-site redesign outside the optimizer screen
+- Single-column layout enforcement and control-group proximity (moved to spec 003)
+- Merging final allocation summary and breakdown into one section (moved to spec 003)
