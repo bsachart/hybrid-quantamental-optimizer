@@ -325,12 +325,12 @@ def _create_chart(
 def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
     """Create a compact allocation bar chart."""
     if alloc_df.empty:
-        return alt.Chart(pd.DataFrame({"Asset": [], "Weight": []})).mark_bar()
+        return alt.Chart(pd.DataFrame({"Asset": ["None"], "Weight": [0.0]})).mark_bar()
 
     chart_df = alloc_df.copy()
     chart_df = chart_df[np.isfinite(chart_df["Weight"])].copy()
     if chart_df.empty:
-        return alt.Chart(pd.DataFrame({"Asset": [], "Weight": []})).mark_bar()
+        return alt.Chart(pd.DataFrame({"Asset": ["None"], "Weight": [0.0]})).mark_bar()
     chart_df["Category"] = chart_df["Asset"].apply(
         lambda asset: (
             "Cash"
