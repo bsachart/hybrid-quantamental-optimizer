@@ -19,7 +19,7 @@ def render_results(
     lending_rate: float,
     borrowing_rate: float | None = None,
 ):
-    alloc_df = _create_allocation_df(final_portfolio, tangency)
+    alloc_df = _create_allocation_df(final_portfolio, tangency, lending_rate, borrowing_rate)
     position_summary = _build_position_summary(final_portfolio)
 
     st.markdown("#### Capital Market Line")
@@ -391,7 +391,10 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
 
 
 def _create_allocation_df(
-    final_portfolio: Dict, universe_context: Dict
+    final_portfolio: Dict, 
+    universe_context: Dict,
+    lending_rate: float = 0.0,
+    borrowing_rate: float | None = None,
 ) -> pd.DataFrame:
     """Create allocation table DataFrame."""
     tickers = universe_context.get("tickers", [])
@@ -410,7 +413,7 @@ def _create_allocation_df(
             {
                 "Asset": "Cash",
                 "Weight": cash_w,
-                "Expected Return": 0.0,
+                "Expected Return": lending_rate,
                 "Volatility": 0.0,
             }
         )
@@ -419,7 +422,7 @@ def _create_allocation_df(
             {
                 "Asset": "Borrowing",
                 "Weight": cash_w,
-                "Expected Return": 0.0,
+                "Expected Return": borrowing_rate if borrowing_rate is not None else lending_rate,
                 "Volatility": 0.0,
             }
         )
