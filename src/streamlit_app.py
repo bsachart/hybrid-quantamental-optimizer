@@ -262,7 +262,9 @@ def _inject_styles() -> None:
         line-height: 1.05;
     }
 
-    div[data-testid="stFileUploaderDropzone"] {
+    [data-testid="stFileUploaderDropzone"],
+    [data-testid="stFileUploadDropzone"] {
+        background-color: rgba(248, 245, 239, 0.88) !important;
         background: rgba(248, 245, 239, 0.88) !important;
         border: 1.5px dashed rgba(27, 108, 92, 0.26) !important;
         border-radius: 18px;
@@ -270,8 +272,10 @@ def _inject_styles() -> None:
         padding-bottom: 1rem;
     }
 
-    div[data-testid="stFileUploaderDropzone"] * {
+    [data-testid="stFileUploaderDropzone"] *,
+    [data-testid="stFileUploadDropzone"] * {
         color: var(--muted) !important;
+        fill: var(--muted) !important;
     }
 
     div[data-testid="stWidgetLabel"] p,
@@ -774,9 +778,15 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
         )
         rate_col_a, rate_col_b = st.columns(2, gap="large")
         with rate_col_a:
-            _render_metric_card(
-                "Lending rate",
-                _fmt_pct(st.session_state.lending_rate),
+            st.slider(
+                "Lending rate (%)",
+                min_value=0.0,
+                max_value=15.0,
+                value=lending_rate_pct,
+                step=0.25,
+                format="%.2f%%",
+                disabled=True,
+                help="The lending rate is fixed from your assumptions in Step 2.",
             )
         with rate_col_b:
             borrowing_rate_pct = st.slider(
