@@ -526,7 +526,7 @@ stage_placeholder = st.empty()
 _render_section_header(
     "Setup",
     "Load inputs and solve the risky portfolio",
-    "Keep the two source files and the model assumptions in view together, then run one solve to unlock the final allocation workflow.",
+    "Upload the price history and asset metrics files, set the model assumptions, then run one solve to unlock the final allocation workflow.",
 )
 
 with st.container(border=True):
@@ -654,7 +654,7 @@ with st.container(border=True):
     _render_card_intro(
         "Status",
         "Current workflow state",
-        "The screen stays in one place while the messaging adapts to what you still need to do next.",
+        "Upload both files and set your assumptions to enable the solver.",
     )
     if files_ready:
         st.markdown(
