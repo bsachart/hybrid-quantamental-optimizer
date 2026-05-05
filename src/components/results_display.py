@@ -172,11 +172,11 @@ def _create_chart(
 
     if df.empty:
         df = pd.DataFrame({
-            "x": [0.0],
-            "y": [0.0],
-            "Category": ["Tangency Portfolio"],
-            "MarkType": ["point"],
-            "Label": ["None"]
+            "x": [0.0, 1.0],
+            "y": [0.0, 1.0],
+            "Category": ["Tangency Portfolio", "Tangency Portfolio"],
+            "MarkType": ["point", "point"],
+            "Label": ["None", "None"]
         })
 
     # --- CHART CONFIGURATION ---
@@ -315,7 +315,7 @@ def _create_chart(
         layers.append(target)
 
     if not layers:
-        dummy_df = pd.DataFrame({"x": [0.0], "y": [0.0], "Category": ["None"], "Label": ["None"]})
+        dummy_df = pd.DataFrame({"x": [0.0, 1.0], "y": [0.0, 1.0], "Category": ["None", "None"], "Label": ["None", "None"]})
         dummy_layer = alt.Chart(dummy_df).mark_point(opacity=0).encode(x=x_axis, y=y_axis)
         layers.append(dummy_layer)
 
@@ -332,12 +332,12 @@ def _create_chart(
 def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
     """Create a compact allocation bar chart."""
     if alloc_df.empty:
-        chart_df = pd.DataFrame({"Asset": ["None"], "Weight": [0.0], "Category": ["Cash"], "Expected Return": [0.0], "Volatility": [0.0]})
+        chart_df = pd.DataFrame({"Asset": ["None", "None"], "Weight": [0.0, 1.0], "Category": ["Cash", "Cash"], "Expected Return": [0.0, 1.0], "Volatility": [0.0, 1.0]})
     else:
         chart_df = alloc_df.copy()
         chart_df = chart_df[np.isfinite(chart_df["Weight"])].copy()
         if chart_df.empty:
-            chart_df = pd.DataFrame({"Asset": ["None"], "Weight": [0.0], "Category": ["Cash"], "Expected Return": [0.0], "Volatility": [0.0]})
+            chart_df = pd.DataFrame({"Asset": ["None", "None"], "Weight": [0.0, 1.0], "Category": ["Cash", "Cash"], "Expected Return": [0.0, 1.0], "Volatility": [0.0, 1.0]})
     chart_df["Category"] = chart_df["Asset"].apply(
         lambda asset: (
             "Cash"
