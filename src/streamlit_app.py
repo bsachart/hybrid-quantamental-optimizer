@@ -593,7 +593,7 @@ with st.container(border=True):
     )
     lending_rate_pct = st.slider(
         "Risk-free rate (%)",
-        min_value=0.0,
+        min_value=-5.0,
         max_value=10.0,
         value=float(st.session_state.lending_rate * 100.0),
         step=0.25,
@@ -786,7 +786,7 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
             
             lending_rate_pct, borrowing_rate_pct = st.slider(
                 "Rates (Lending & Borrowing) (%)",
-                min_value=0.0,
+                min_value=-5.0,
                 max_value=15.0,
                 value=(
                     float(st.session_state.lending_rate * 100.0),
