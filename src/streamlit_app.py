@@ -854,12 +854,6 @@ if solve_complete and st.session_state.tangency_portfolio is not None:
         max_volatility=tangency["volatility"] * 2.0,
         num_points=41,
     )
-    final_portfolio = target_portfolio(
-        tangency_portfolio=tangency,
-        target_volatility=target_vol_pct / 100.0,
-        risk_free_rate=st.session_state.lending_rate,
-        borrowing_rate=borrowing_rate,
-    )
 
     render_results(
         tangency=tangency,
