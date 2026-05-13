@@ -5,18 +5,32 @@ from io import StringIO
 
 import streamlit as st
 
-from components.results_display import render_results
-from components.workflow_state import (
-    build_run_summary,
-    build_setup_status,
-    build_workflow_stages,
-)
-from engine.portfolio_engine_pandas import (
-    generate_cml,
-    optimize_portfolio,
-    target_portfolio,
-)
-from engine.risk_pandas import RiskModel
+try:
+    from components.results_display import render_results
+    from components.workflow_state import (
+        build_run_summary,
+        build_setup_status,
+        build_workflow_stages,
+    )
+    from engine.portfolio_engine_pandas import (
+        generate_cml,
+        optimize_portfolio,
+        target_portfolio,
+    )
+    from engine.risk_pandas import RiskModel
+except ModuleNotFoundError:  # pragma: no cover - used by AppTest package-style imports
+    from src.components.results_display import render_results
+    from src.components.workflow_state import (
+        build_run_summary,
+        build_setup_status,
+        build_workflow_stages,
+    )
+    from src.engine.portfolio_engine_pandas import (
+        generate_cml,
+        optimize_portfolio,
+        target_portfolio,
+    )
+    from src.engine.risk_pandas import RiskModel
 
 
 def _inject_styles() -> None:
@@ -26,336 +40,265 @@ def _inject_styles() -> None:
     @import url('https://fonts.googleapis.com/css2?family=Gelasio:wght@500;600;700&family=Urbanist:wght@400;500;600;700&display=swap');
 
     :root {
-        --bg: #f6f1e7;
-        --panel: rgba(255, 255, 251, 0.94);
-        --panel-strong: rgba(255, 255, 251, 0.98);
-        --ink: #1f242a;
-        --muted: #625d57;
-        --line: rgba(31, 36, 42, 0.10);
+        --bg: #f7f3ea;
+        --bg-accent: #efe7d8;
+        --panel: rgba(255, 251, 245, 0.94);
+        --panel-strong: #fffdf8;
+        --ink: #1f2933;
+        --muted: #5f6c76;
+        --line: rgba(31, 41, 51, 0.12);
         --accent: #1b6c5c;
-        --accent-soft: rgba(27, 108, 92, 0.08);
-        --warn: #af6a2d;
-        --warn-soft: rgba(175, 106, 45, 0.10);
-        --error: #a44646;
-        --error-soft: rgba(164, 70, 70, 0.10);
-        --shadow: 0 18px 40px rgba(78, 63, 39, 0.08);
+        --accent-strong: #155548;
+        --accent-soft: rgba(27, 108, 92, 0.1);
+        --warning: #c76b3f;
+        --warning-soft: rgba(199, 107, 63, 0.12);
+        --neutral-soft: rgba(95, 108, 118, 0.1);
+        --shadow: 0 18px 36px rgba(31, 41, 51, 0.08);
+        --radius-lg: 20px;
+        --radius-md: 16px;
+        --space-card: 1.5rem;
     }
 
-    .stApp {
-        background:
-            radial-gradient(circle at top left, rgba(27, 108, 92, 0.08), transparent 26%),
-            linear-gradient(180deg, #f2ebdf 0%, var(--bg) 24%, #fbf8f3 100%);
-        color: var(--ink);
-        font-family: "Urbanist", "Segoe UI", sans-serif;
+    html, body, [class*="stApp"] {
+        font-family: "Urbanist", sans-serif;
+        background: var(--bg) !important;
+        color: var(--ink) !important;
     }
 
+    .stApp,
     [data-testid="stAppViewContainer"],
-    [data-testid="stAppViewContainer"] * {
-        font-family: "Urbanist", "Segoe UI", sans-serif;
+    [data-testid="stApp"] {
+        background-color: var(--bg) !important;
+        background-image:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 26%),
+            linear-gradient(180deg, var(--bg), var(--bg-accent)) !important;
+        color: var(--ink) !important;
     }
 
     [data-testid="stHeader"] {
-        background: rgba(246, 241, 231, 0.82);
-        backdrop-filter: blur(10px);
+        background: rgba(247, 243, 234, 0.92) !important;
+    }
+
+    section.main > div,
+    [data-testid="stMain"] {
+        background: transparent !important;
     }
 
     [data-testid="stMainBlockContainer"] {
-        max-width: 1120px;
-        padding-top: 1.6rem;
-        padding-bottom: 2.6rem;
+        max-width: 1120px !important;
+        margin: 0 auto !important;
+        padding-top: 2.5rem;
+        padding-bottom: 5rem;
     }
 
-    [data-testid="stVerticalBlockBorderWrapper"] {
-        background: var(--panel);
-        border-radius: 22px;
-        border: 1px solid var(--line);
-        box-shadow: var(--shadow);
-        padding: 1.1rem 1.15rem 1.2rem;
-    }
+    .app-header, .section-wrap { margin-bottom: 2rem; }
 
-    .app-header {
-        background: var(--panel-strong);
-        border: 1px solid var(--line);
-        border-radius: 28px;
-        box-shadow: var(--shadow);
-        padding: 1.35rem 1.4rem 1.45rem;
-        margin-bottom: 1.15rem;
-    }
-
-    .app-kicker,
-    .section-kicker,
-    .card-kicker,
-    .stage-step,
-    .metric-label {
+    .app-kicker, .section-kicker, .card-kicker, .stage-step, .metric-label {
         text-transform: uppercase;
         letter-spacing: 0.12em;
         font-size: 0.74rem;
         font-weight: 700;
+        color: var(--accent) !important;
+        margin-bottom: 0.5rem;
     }
 
-    .app-kicker,
-    .section-kicker,
-    .card-kicker,
-    .stage-step {
-        color: #936132;
-    }
-
-    .app-title,
-    .section-title,
-    .card-title,
-    .metric-value {
-        font-family: "Gelasio", "Georgia", serif;
-        color: var(--ink);
+    .app-title, .section-title, .card-title, .stage-title, .metric-value {
+        font-family: "Gelasio", serif;
+        color: var(--ink) !important;
         letter-spacing: -0.02em;
+        margin-top: 0;
     }
 
-    .app-title {
-        font-size: clamp(2.3rem, 4vw, 3.6rem);
-        line-height: 1.02;
-        margin: 0.45rem 0 0.75rem;
-        max-width: none;
+    .app-title { font-size: clamp(2.7rem, 6vw, 3.8rem); line-height: 1.02; }
+    .section-title { font-size: clamp(1.8rem, 4vw, 2.3rem); }
+    .card-title, .stage-title { font-size: 1.35rem; }
+
+    .app-copy, .section-copy, .card-copy, .stage-copy, .status-copy {
+        color: var(--muted) !important;
+        line-height: 1.65;
+        font-size: 1rem;
     }
 
-    .app-copy,
-    .section-copy,
-    .card-copy,
-    .stage-copy,
-    .status-copy,
-    .file-note,
-    .inline-note {
-        color: var(--muted);
-        line-height: 1.6;
-    }
-
-    .app-copy {
-        max-width: 72ch;
-        margin-bottom: 0;
-    }
-
-    .section-wrap {
-        margin: 1.35rem 0 0.95rem;
-    }
-
-    .section-title {
-        font-size: 1.7rem;
-        line-height: 1.08;
-        margin: 0.3rem 0 0.4rem;
-    }
-
-    .section-copy {
-        max-width: 58ch;
-        margin-bottom: 0;
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        padding: var(--space-card) !important;
+        margin-bottom: 1.5rem;
+        backdrop-filter: blur(10px);
+        overflow: hidden;
     }
 
     .stage-card {
         background: var(--panel-strong);
         border: 1px solid var(--line);
-        border-radius: 20px;
-        box-shadow: var(--shadow);
-        padding: 1rem 1rem 1.05rem;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        height: 100%;
     }
 
     .stage-card.stage--active {
-        border-color: rgba(27, 108, 92, 0.32);
-        background: linear-gradient(180deg, rgba(27, 108, 92, 0.08), rgba(255, 255, 251, 0.98));
+        border-color: var(--accent);
+        background-image: linear-gradient(180deg, var(--accent-soft), transparent);
     }
 
-    .stage-card.stage--complete {
-        border-color: rgba(27, 108, 92, 0.22);
-        background: rgba(243, 250, 247, 0.96);
-    }
-
-    .stage-card.stage--pending {
-        background: rgba(255, 255, 251, 0.82);
-    }
-
-    .stage-title,
-    .card-title {
-        font-size: 1.2rem;
-        margin: 0.45rem 0 0.35rem;
-    }
-
-    .card-copy,
-    .stage-copy {
-        font-size: 0.94rem;
-    }
-
-    .card-copy {
-        margin-bottom: 0.2rem;
-    }
-
-    .inline-note {
-        background: rgba(243, 237, 227, 0.86);
-        border: 1px solid rgba(31, 36, 42, 0.09);
-        border-radius: 16px;
-        padding: 0.85rem 0.95rem;
-        font-size: 0.92rem;
-        margin: 0.85rem 0;
-    }
-
-    .file-ready,
     .status-card {
-        border-radius: 18px;
-        padding: 0.95rem 1rem;
+        border-radius: var(--radius-md);
+        padding: 1rem 1.1rem;
         border: 1px solid var(--line);
+        margin: 1rem 0;
+        background: var(--panel-strong);
     }
 
-    .file-ready {
-        background: rgba(27, 108, 92, 0.07);
-        border-color: rgba(27, 108, 92, 0.14);
-        margin-top: 0.95rem;
-    }
-
-    .file-ready strong,
     .status-title {
-        display: block;
         color: var(--ink);
-        font-size: 0.96rem;
-        margin-bottom: 0.2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
     }
 
-    .status-card.status--neutral {
-        background: rgba(243, 237, 227, 0.90);
-    }
-
-    .status-card.status--warning {
-        background: var(--warn-soft);
-        border-color: rgba(175, 106, 45, 0.18);
-    }
-
-    .status-card.status--ready,
-    .status-card.status--success {
+    .status-card.status--neutral { background: var(--neutral-soft); }
+    .status-card.status--ready {
         background: var(--accent-soft);
-        border-color: rgba(27, 108, 92, 0.18);
+        border-color: var(--accent);
+    }
+    .status-card.status--warning {
+        background: var(--warning-soft);
+        border-color: var(--warning);
     }
 
-    .status-card.status--error {
-        background: var(--error-soft);
-        border-color: rgba(164, 70, 70, 0.18);
+    div.stButton { margin: 1rem 0 0.5rem; }
+
+    div.stButton > button[kind="primary"],
+    [data-testid="stBaseButton-primary"],
+    div.stButton > button[data-testid="stBaseButton-primary"] {
+        border-radius: 999px !important;
+        background: var(--accent) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        max-width: 320px !important;
+        margin: 0 auto !important;
+        display: block !important;
+        height: 3.35rem !important;
+        font-weight: 700 !important;
+        font-size: 1.02rem !important;
+        border: 1px solid transparent !important;
+        box-shadow: 0 12px 24px rgba(27, 108, 92, 0.22) !important;
     }
 
-    .control-label {
-        color: var(--ink);
-        font-size: 0.9rem;
-        font-weight: 600;
-        margin-bottom: 0.35rem;
+    div.stButton > button[kind="primary"]:hover {
+        background: var(--accent-strong) !important;
+        border-color: var(--accent-strong) !important;
     }
 
-    .metric-card {
-        background: rgba(255, 255, 251, 0.96);
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 0.95rem 1rem 1.05rem;
-        min-height: 6.75rem;
-    }
-
-    .metric-label {
-        color: #6c675f;
-        margin-bottom: 0.8rem;
-    }
-
-    .metric-value {
-        font-size: 2rem;
-        line-height: 1.05;
-    }
-
-    [data-testid="stFileUploaderDropzone"],
-    [data-testid="stFileUploadDropzone"] {
-        background-color: rgba(248, 245, 239, 0.88) !important;
-        background: rgba(248, 245, 239, 0.88) !important;
-        border: 1.5px dashed rgba(27, 108, 92, 0.26) !important;
-        border-radius: 18px;
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-
-    [data-testid="stFileUploaderDropzone"] *,
-    [data-testid="stFileUploadDropzone"] * {
+    div.stButton > button[kind="primary"]:disabled,
+    [data-testid="stBaseButton-primary"]:disabled,
+    div.stButton > button:disabled {
+        background: var(--panel-strong) !important;
+        border: 1px solid var(--line) !important;
         color: var(--muted) !important;
-        fill: var(--muted) !important;
+        -webkit-text-fill-color: var(--muted) !important;
+        opacity: 1 !important;
+        box-shadow: none !important;
+        cursor: not-allowed !important;
     }
 
     div[data-testid="stWidgetLabel"] p,
     div[data-testid="stWidgetLabel"] label,
-    label[data-testid="stWidgetLabel"] {
+    div[data-testid="stRadio"] label,
+    div[data-testid="stSlider"] label {
         color: var(--ink) !important;
-        opacity: 1 !important;
         font-weight: 600 !important;
     }
 
-    div[data-testid="stSlider"] p,
-    div[data-testid="stSlider"] span,
-    div[data-testid="stSlider"] label,
-    div[data-testid="stRadio"] p,
-    div[data-testid="stRadio"] span,
-    div[data-testid="stRadio"] label {
+    [data-testid="stFileUploader"],
+    [data-testid="stCodeBlock"] {
+        border-radius: var(--radius-md);
+    }
+
+    [data-testid="stFileUploaderDropzone"] {
+        background: var(--panel-strong) !important;
+        border: 1px solid var(--line) !important;
         color: var(--ink) !important;
-        opacity: 1 !important;
     }
 
-    div[data-testid="stFileUploader"] section small,
-    div[data-testid="stFileUploader"] section span,
-    div[data-testid="stFileUploader"] section p {
-        color: var(--muted) !important;
-        opacity: 1 !important;
-    }
-
-    button[kind="primary"] {
-        border-radius: 999px;
-        border: 0;
-        background: linear-gradient(135deg, #1d6e5d, #0f5647);
-        box-shadow: 0 16px 30px rgba(27, 108, 92, 0.20);
-        min-height: 3.15rem;
-        font-weight: 700;
-    }
-
-    button[kind="secondary"] {
-        border-radius: 999px;
-        background: #f8f6f1;
-        color: var(--ink);
-        border: 1px solid rgba(31, 36, 42, 0.12);
-    }
-
-    div[data-testid="stDownloadButton"] button,
-    div[data-testid="stDownloadButton"] button:hover {
-        background: #f8f6f1 !important;
+    [data-testid="stFileUploaderDropzone"] * {
         color: var(--ink) !important;
-        border: 1px solid rgba(31, 36, 42, 0.12) !important;
-        box-shadow: none !important;
     }
 
-    div[data-testid="stCaptionContainer"],
-    div[data-testid="stCaptionContainer"] * {
+    [data-testid="stFileUploaderDropzone"] button,
+    div.stButton > button[kind="secondary"] {
+        background: var(--panel-strong) !important;
+        color: var(--ink) !important;
+        border: 1px solid var(--line) !important;
+        border-radius: 999px !important;
+    }
+
+    [data-testid="stFileUploaderDropzone"] button:hover,
+    div.stButton > button[kind="secondary"]:hover {
+        border-color: var(--accent) !important;
+        color: var(--accent) !important;
+    }
+
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stCaptionContainer"],
+    .st-emotion-cache-ue6h4q {
         color: var(--muted);
-        opacity: 1;
     }
 
-    div[data-testid="stCodeBlock"] pre,
-    div[data-testid="stCodeBlock"] code,
-    div[data-testid="stCode"] pre,
-    div[data-testid="stCode"] code {
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace !important;
+    .file-ready,
+    .inline-note,
+    .metric-card {
+        background: var(--panel-strong);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+    }
+
+    .file-ready,
+    .inline-note {
+        padding: 0.9rem 1rem;
+        color: var(--ink);
+    }
+
+    .file-note,
+    .inline-note {
+        color: var(--muted);
+        line-height: 1.55;
+    }
+
+    .metric-card {
+        padding: 1rem 1.1rem;
+        height: 100%;
+    }
+
+    .metric-value {
+        font-size: 1.9rem;
+        line-height: 1.1;
+        margin-top: 0.1rem;
     }
 
     .footer-note {
         color: var(--muted);
         text-align: center;
-        font-size: 0.88rem;
-        margin-top: 2rem;
+        font-size: 0.95rem;
+        padding: 1rem 0 0;
     }
 
     .footer-note a {
         color: var(--accent);
         text-decoration: none;
-        font-weight: 700;
     }
 
-    @media (max-width: 980px) {
-        .app-title {
-            max-width: none;
+    @media (max-width: 900px) {
+        [data-testid="stMainBlockContainer"] {
+            padding-top: 1.5rem;
+            padding-bottom: 4rem;
+        }
+
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            padding: 1.15rem !important;
         }
     }
 </style>
@@ -674,13 +617,15 @@ with st.container(border=True):
         setup_status.message,
         setup_status.tone,
     )
-    st.markdown("<div style='height: 0.8rem;'></div>", unsafe_allow_html=True)
-    optimize_button = st.button(
-        "Solve risky portfolio",
-        type="primary",
-        use_container_width=True,
-        disabled=not setup_status.ready_to_solve,
-    )
+    optimize_button = False
+    if not solve_complete:
+        optimize_button = st.button(
+            "Solve risky portfolio",
+            type="primary",
+            width="stretch",
+            disabled=not setup_status.ready_to_solve,
+            key="solve_button",
+        )
 
 if optimize_button:
     with st.spinner("Solving portfolio and generating the capital market line..."):

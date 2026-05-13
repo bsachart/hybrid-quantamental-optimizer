@@ -12,6 +12,94 @@ import numpy as np
 import altair as alt
 
 
+_LIGHT_THEME = {
+    "axis": "#5f6c76",
+    "grid": "#d8e0e6",
+    "paper": "#fffdf8",
+    "accent": "#1b6c5c",
+    "accent_alt": "#c76b3f",
+    "asset": "#7b8794",
+    "tangency": "#155548",
+    "final": "#c79b37",
+}
+
+
+def _empty_xy_frame(*, series: str | None = None) -> pd.DataFrame:
+    frame = pd.DataFrame({"x": [], "y": []})
+    if series is not None:
+        frame["Series"] = pd.Series(dtype="object")
+    return frame
+
+
+def _build_cml_segment_frames(
+    tangency: Dict,
+    cml_points: List[Dict],
+    lending_rate: float,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Build explicit lending and borrowing CML segments."""
+    t_vol = _safe_float(tangency.get("volatility"))
+    t_ret = _safe_float(tangency.get("expected_return"))
+
+    borrowing_rows: list[dict[str, float | str]] = []
+    lending_df = pd.DataFrame(
+        [
+            {
+                "x": 0.0,
+                "y": _safe_float(lending_rate),
+                "Series": "Lending Capital Market Line",
+            },
+            {
+                "x": t_vol,
+                "y": t_ret,
+                "Series": "Lending Capital Market Line",
+            },
+        ]
+    )
+
+    for point in cml_points:
+        if _safe_float(point.get("cash_weight")) < -1e-8:
+            borrowing_rows.append(
+                {
+                    "x": _safe_float(point.get("volatility")),
+                    "y": _safe_float(point.get("expected_return")),
+                    "Series": "Borrowing Capital Market Line",
+                }
+            )
+
+    borrowing_df = pd.DataFrame(
+        borrowing_rows,
+        columns=["x", "y", "Series"],
+    )
+    if not borrowing_df.empty:
+        borrowing_df = borrowing_df[
+            np.isfinite(borrowing_df["x"]) & np.isfinite(borrowing_df["y"])
+        ].copy()
+        borrowing_df = borrowing_df.sort_values("x", kind="stable").reset_index(drop=True)
+        borrowing_df = borrowing_df.tail(1).copy()
+        borrowing_df = pd.concat(
+            [
+                pd.DataFrame(
+                    [
+                        {
+                            "x": t_vol,
+                            "y": t_ret,
+                            "Series": "Borrowing Capital Market Line",
+                        }
+                    ]
+                ),
+                borrowing_df,
+            ],
+            ignore_index=True,
+        )
+
+    if lending_df.empty:
+        lending_df = _empty_xy_frame(series="Lending Capital Market Line")
+    if borrowing_df.empty:
+        borrowing_df = _empty_xy_frame(series="Borrowing Capital Market Line")
+
+    return lending_df, borrowing_df
+
+
 def render_results(
     tangency: Dict,
     final_portfolio: Dict,
@@ -34,7 +122,7 @@ def render_results(
         lending_rate,
         borrowing_rate=borrowing_rate,
     )
-    st.altair_chart(chart, use_container_width=True, theme=None)
+    st.altair_chart(chart, width="stretch", theme="streamlit")
 
     csv_data = _create_results_csv(final_portfolio, tangency)
     st.download_button(
@@ -42,7 +130,7 @@ def render_results(
         data=csv_data,
         file_name="portfolio_optimization_results.csv",
         mime="text/csv",
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("#### Final allocation")
@@ -52,22 +140,22 @@ def render_results(
     st.markdown(
         f"""
         <div style="
-            background: rgba(22, 108, 89, 0.08);
-            border: 1px solid rgba(22, 108, 89, 0.14);
+            background: var(--accent-soft);
+            border: 1px solid var(--line);
             border-radius: 18px;
             padding: 1rem 1rem 0.95rem;
-            color: #355247;
+            color: var(--ink);
             line-height: 1.6;
             margin-bottom: 0.75rem;
         ">
-            <strong style="display:block; color:#1f3b32; margin-bottom:0.2rem;">Position summary</strong>
+            <strong style="display:block; color:var(--ink); margin-bottom:0.2rem;">Position summary</strong>
             {position_summary}
         </div>
         """,
         unsafe_allow_html=True,
     )
     allocation_chart = _create_allocation_chart(alloc_df)
-    st.altair_chart(allocation_chart, use_container_width=True, theme=None)
+    st.altair_chart(allocation_chart, width="stretch", theme="streamlit")
     _render_allocation_table(alloc_df)
 
 
@@ -99,36 +187,13 @@ def _create_chart(
     """
     t_vol = _safe_float(tangency.get("volatility"))
     t_ret = _safe_float(tangency.get("expected_return"))
+    lending_df, borrowing_df = _build_cml_segment_frames(
+        tangency,
+        cml_points,
+        lending_rate,
+    )
 
-    lending_rows = []
-    borrowing_rows = []
-    for p in cml_points:
-        row = {
-            "x": _safe_float(p.get("volatility")),
-            "y": _safe_float(p.get("expected_return")),
-            "MarkType": "line",
-            "Label": "",
-        }
-        if _safe_float(p.get("cash_weight")) < -1e-8:
-            row["Category"] = "Borrowing Capital Market Line"
-            borrowing_rows.append(row)
-        else:
-            row["Category"] = "Lending Capital Market Line"
-            lending_rows.append(row)
-
-    rows = lending_rows.copy()
-    if borrowing_rows:
-        borrowing_rows.insert(
-            0,
-            {
-                "x": t_vol,
-                "y": t_ret,
-                "Category": "Borrowing Capital Market Line",
-                "MarkType": "line",
-                "Label": "",
-            },
-        )
-        rows.extend(borrowing_rows)
+    rows = []
 
     tickers = tangency.get("tickers", [])
     asset_rets = tangency.get("asset_returns", [])
@@ -166,7 +231,7 @@ def _create_chart(
         }
     )
 
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(rows, columns=["x", "y", "Category", "MarkType", "Label"])
     if not df.empty:
         df = df[np.isfinite(df["x"]) & np.isfinite(df["y"])].copy()
 
@@ -179,7 +244,6 @@ def _create_chart(
             "Label": ["None", "None"]
         })
 
-    # --- CHART CONFIGURATION ---
     color_scale = alt.Scale(
         domain=[
             "Lending Capital Market Line",
@@ -188,7 +252,13 @@ def _create_chart(
             "Tangency Portfolio",
             "Final Portfolio",
         ],
-        range=["#166c59", "#c76b3f", "#6d8391", "#0f4d40", "#d7aa4b"],
+        range=[
+            _LIGHT_THEME["accent"],
+            _LIGHT_THEME["accent_alt"],
+            _LIGHT_THEME["asset"],
+            _LIGHT_THEME["tangency"],
+            _LIGHT_THEME["final"],
+        ],
     )
 
     x_axis = alt.X(
@@ -197,11 +267,9 @@ def _create_chart(
         scale=alt.Scale(nice=True, zero=True, domainMin=0, padding=12),
         axis=alt.Axis(
             format="%",
-            labelColor="#6e6a63",
-            titleColor="#22252b",
-            gridColor="rgba(34, 37, 43, 0.12)",
-            domainColor="rgba(34, 37, 43, 0.16)",
-            tickColor="rgba(34, 37, 43, 0.16)",
+            labelColor=_LIGHT_THEME["axis"],
+            titleColor=_LIGHT_THEME["axis"],
+            gridColor=_LIGHT_THEME["grid"],
         ),
     )
     y_axis = alt.Y(
@@ -210,52 +278,47 @@ def _create_chart(
         scale=alt.Scale(nice=True, zero=True, padding=12),
         axis=alt.Axis(
             format="%",
-            labelColor="#6e6a63",
-            titleColor="#22252b",
-            gridColor="rgba(34, 37, 43, 0.12)",
-            domainColor="rgba(34, 37, 43, 0.16)",
-            tickColor="rgba(34, 37, 43, 0.16)",
+            labelColor=_LIGHT_THEME["axis"],
+            titleColor=_LIGHT_THEME["axis"],
+            gridColor=_LIGHT_THEME["grid"],
         ),
     )
 
-    df_lines = df[df["MarkType"] == "line"].copy()
-
     layers = []
 
-    if len(df_lines) >= 2:
-        cml = (
-            alt.Chart(df_lines)
+    if len(lending_df) >= 2:
+        lending_line = (
+            alt.Chart(lending_df)
             .mark_line(size=3)
             .encode(
                 x=x_axis,
                 y=y_axis,
-                color=alt.Color(
-                    "Category:N",
-                    scale=color_scale,
-                    legend=alt.Legend(
-                        title="Series",
-                        orient="top",
-                        direction="horizontal",
-                        columns=2,
-                        labelColor="#4d4b46",
-                        titleColor="#22252b",
-                    ),
-                ),
-                strokeDash=alt.StrokeDash(
-                    "Category:N",
-                    scale=alt.Scale(
-                        domain=[
-                            "Lending Capital Market Line",
-                            "Borrowing Capital Market Line",
-                        ],
-                        range=[[1, 0], [6, 4]],
-                    ),
-                    legend=None,
-                ),
-                order="x:Q",
+                color=alt.Color("Series:N", scale=color_scale, legend=None),
+                tooltip=[
+                    alt.Tooltip("Series:N", title="Series"),
+                    alt.Tooltip("x:Q", format=".2%", title="Volatility"),
+                    alt.Tooltip("y:Q", format=".2%", title="Return"),
+                ],
             )
         )
-        layers.append(cml)
+        layers.append(lending_line)
+
+    if len(borrowing_df) >= 2:
+        borrowing_line = (
+            alt.Chart(borrowing_df)
+            .mark_line(size=3, strokeDash=[6, 4], opacity=0.8)
+            .encode(
+                x=x_axis,
+                y=y_axis,
+                color=alt.Color("Series:N", scale=color_scale, legend=None),
+                tooltip=[
+                    alt.Tooltip("Series:N", title="Series"),
+                    alt.Tooltip("x:Q", format=".2%", title="Volatility"),
+                    alt.Tooltip("y:Q", format=".2%", title="Return"),
+                ],
+            )
+        )
+        layers.append(borrowing_line)
 
     df_points = df[df["MarkType"] == "point"].copy()
 
@@ -282,7 +345,7 @@ def _create_chart(
     if not df_tangency.empty:
         tangency_point = (
             alt.Chart(df_tangency)
-            .mark_point(shape="cross", size=200, filled=True)
+            .mark_point(shape="circle", size=180, filled=True, stroke="black", strokeWidth=1.2)
             .encode(
                 x=x_axis,
                 y=y_axis,
@@ -300,7 +363,7 @@ def _create_chart(
     if not df_target.empty:
         target = (
             alt.Chart(df_target)
-            .mark_point(shape="diamond", size=200, filled=True)
+            .mark_point(shape="cross", size=260, filled=True, strokeWidth=3)
             .encode(
                 x=x_axis,
                 y=y_axis,
@@ -322,10 +385,16 @@ def _create_chart(
     return (
         alt.layer(*layers)
         .properties(height=520)
-        .configure(background="#fffdf9")
         .configure_view(stroke=None)
+        .configure(background=_LIGHT_THEME["paper"])
         .configure_axis(labelFont="Urbanist", titleFont="Urbanist")
-        .configure_legend(labelFont="Urbanist", titleFont="Urbanist")
+        .configure_legend(
+            labelFont="Urbanist",
+            titleFont="Urbanist",
+            orient="top",
+            direction="horizontal",
+            columns=2,
+        )
     )
 
 
@@ -338,6 +407,9 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
         chart_df = chart_df[np.isfinite(chart_df["Weight"])].copy()
         if chart_df.empty:
             chart_df = pd.DataFrame({"Asset": ["None", "None"], "Weight": [0.0, 1.0], "Category": ["Cash", "Cash"], "Expected Return": [0.0, 1.0], "Volatility": [0.0, 1.0]})
+    chart_df = chart_df.replace([np.inf, -np.inf], np.nan).dropna(subset=["Weight"]).copy()
+    if chart_df.empty:
+        chart_df = pd.DataFrame({"Asset": ["None", "None"], "Weight": [0.0, 1.0], "Category": ["Cash", "Cash"], "Expected Return": [0.0, 1.0], "Volatility": [0.0, 1.0]})
     chart_df["Category"] = chart_df["Asset"].apply(
         lambda asset: (
             "Cash"
@@ -357,22 +429,22 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
                 scale=alt.Scale(nice=True, zero=True),
                 axis=alt.Axis(
                     format="%",
-                    labelColor="#6e6a63",
-                    titleColor="#22252b",
-                    gridColor="rgba(34, 37, 43, 0.10)",
                 ),
             ),
             y=alt.Y(
                 "Asset:N",
                 sort="-x",
                 title=None,
-                axis=alt.Axis(labelColor="#4d4b46"),
             ),
             color=alt.Color(
                 "Category:N",
                 scale=alt.Scale(
                     domain=["Risky assets", "Cash", "Borrowing"],
-                    range=["#166c59", "#c76b3f", "#a44646"],
+                    range=[
+                        _LIGHT_THEME["accent"],
+                        _LIGHT_THEME["asset"],
+                        _LIGHT_THEME["accent_alt"],
+                    ],
                 ),
                 legend=None,
             ),
@@ -384,8 +456,8 @@ def _create_allocation_chart(alloc_df: pd.DataFrame) -> alt.Chart:
             ],
         )
         .properties(height=max(160, 48 * len(chart_df)))
-        .configure(background="#fffdf9")
         .configure_view(stroke=None)
+        .configure(background=_LIGHT_THEME["paper"])
         .configure_axis(labelFont="Urbanist", titleFont="Urbanist")
     )
 
@@ -537,16 +609,16 @@ def _render_allocation_table(alloc_df: pd.DataFrame) -> None:
                 width: 100%;
                 border-collapse: separate;
                 border-spacing: 0;
-                background: rgba(255, 255, 252, 0.96);
-                border: 1px solid rgba(34, 37, 43, 0.10);
+                background: var(--panel);
+                border: 1px solid var(--line);
                 border-radius: 18px;
                 overflow: hidden;
-                box-shadow: 0 18px 48px rgba(91, 70, 42, 0.06);
+                box-shadow: var(--shadow);
             }}
 
             .allocation-table thead tr {{
-                background: #f3eee4;
-                color: #22252b;
+                background: var(--bg);
+                color: var(--ink);
             }}
 
             .allocation-table th,
@@ -565,8 +637,8 @@ def _render_allocation_table(alloc_df: pd.DataFrame) -> None:
             }}
 
             .allocation-table tbody tr td {{
-                color: #3d3a35;
-                border-top: 1px solid rgba(34, 37, 43, 0.08);
+                color: var(--ink);
+                border-top: 1px solid var(--line);
             }}
         </style>
         <div class="allocation-table-wrap">

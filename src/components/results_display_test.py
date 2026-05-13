@@ -2,6 +2,7 @@ import numpy as np
 
 from src.components.results_display import (
     _build_position_summary,
+    _build_cml_segment_frames,
     _create_allocation_df,
     _create_results_csv,
 )
@@ -57,3 +58,25 @@ def test_build_position_summary_uses_borrowing_terms():
 
     assert "150.0% is invested in the tangency portfolio" in summary
     assert "50.0% is financed at the borrowing rate." in summary
+
+
+def test_build_cml_segment_frames_creates_two_point_segments():
+    tangency = _sample_tangency()
+    cml_points = [
+        {"volatility": 0.0, "expected_return": 0.04, "cash_weight": 1.0},
+        {"volatility": 0.10, "expected_return": 0.08, "cash_weight": 0.5},
+        {"volatility": 0.20, "expected_return": 0.12, "cash_weight": 0.0},
+        {"volatility": 0.30, "expected_return": 0.15, "cash_weight": -0.5},
+        {"volatility": 0.40, "expected_return": 0.18, "cash_weight": -1.0},
+    ]
+
+    lending_df, borrowing_df = _build_cml_segment_frames(
+        tangency,
+        cml_points,
+        lending_rate=0.04,
+    )
+
+    assert list(lending_df["x"]) == [0.0, 0.20]
+    assert list(np.round(lending_df["y"], 4)) == [0.04, 0.12]
+    assert list(np.round(borrowing_df["x"], 4)) == [0.20, 0.40]
+    assert list(np.round(borrowing_df["y"], 4)) == [0.12, 0.18]
