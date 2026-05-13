@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Gelasio:wght@500;600;700&family=Urbanist:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg: #f7f3ea;
+    --bg-accent: #efe7d8;
+    --panel: rgba(255, 251, 245, 0.94);
+    --panel-strong: #fffdf8;
+    --ink: #1f2933;
+    --muted: #5f6c76;
+    --line: rgba(31, 41, 51, 0.12);
+    --accent: #1b6c5c;
+    --accent-strong: #155548;
+    --accent-soft: rgba(27, 108, 92, 0.1);
+    --warning: #c76b3f;
+    --warning-soft: rgba(199, 107, 63, 0.12);
+    --neutral-soft: rgba(95, 108, 118, 0.1);
+    --shadow: 0 18px 36px rgba(31, 41, 51, 0.08);
+    --radius-lg: 20px;
+    --radius-md: 16px;
+    --space-card: 1.5rem;
+}
+
+body {
+    font-family: "Urbanist", sans-serif;
+    background-color: var(--bg);
+    background-image:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 26%),
+        linear-gradient(180deg, var(--bg), var(--bg-accent));
+    color: var(--ink);
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 2.5rem 1rem 5rem;
+}
+
+/* Typography */
+.app-header { margin-bottom: 2rem; }
+
+.app-kicker, .section-kicker, .card-kicker, .stage-step, .metric-label {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.app-title, .section-title, .card-title, .stage-title, .metric-value {
+    font-family: "Gelasio", serif;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin-top: 0;
+}
+
+.app-title { font-size: clamp(2.7rem, 6vw, 3.8rem); line-height: 1.02; }
+.section-title { font-size: clamp(1.8rem, 4vw, 2.3rem); }
+.card-title, .stage-title { font-size: 1.35rem; }
+
+.app-copy, .section-copy, .card-copy, .stage-copy, .status-copy {
+    color: var(--muted);
+    line-height: 1.65;
+    font-size: 1rem;
+}
+
+/* Cards & Layout */
+.card-wrapper {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: var(--space-card);
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+}
+
+.status-card {
+    border-radius: var(--radius-md);
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--line);
+    margin: 1rem 0;
+    background: var(--panel-strong);
+}
+
+.status-title {
+    color: var(--ink);
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.status--neutral { background: var(--neutral-soft); }
+.status--ready {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+.status--warning {
+    background: var(--warning-soft);
+    border-color: var(--warning);
+}
+
+/* Form Controls */
+.primary-button {
+    border-radius: 999px;
+    background: var(--accent);
+    color: #ffffff;
+    width: 100%;
+    max-width: 320px;
+    margin: 1rem auto;
+    display: block;
+    height: 3.35rem;
+    font-weight: 700;
+    font-size: 1.02rem;
+    border: 1px solid transparent;
+    box-shadow: 0 12px 24px rgba(27, 108, 92, 0.22);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.primary-button:hover {
+    background: var(--accent-strong);
+}
+
+.primary-button:disabled {
+    background: var(--panel-strong);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* Tables */
+.allocation-table-wrap {
+    overflow-x: auto;
+}
+
+.allocation-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.allocation-table thead tr {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.allocation-table th,
+.allocation-table td {
+    padding: 0.9rem 1rem;
+}
+
+.allocation-table th {
+    font-weight: 700;
+    text-align: left;
+}
+
+.allocation-table th:not(:first-child),
+.allocation-table td:not(:first-child) {
+    text-align: right;
+}
+
+.allocation-table tbody tr td {
+    color: var(--ink);
+    border-top: 1px solid var(--line);
+}
+
+/* Metric Cards */
+.metric-card {
+    background: var(--panel-strong);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.1rem;
+    height: 100%;
+}
+
+.metric-value {
+    font-size: 1.9rem;
+    line-height: 1.1;
+    margin-top: 0.1rem;
+}
+
+/* Dash Specific Overrides */
+.dash-spreadsheet-container {
+    border-radius: var(--radius-md) !important;
+}
+
+.upload-area {
+    border: 2px dashed var(--line);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    text-align: center;
+    background: var(--panel-strong);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.upload-area:hover {
+    border-color: var(--accent);
+}

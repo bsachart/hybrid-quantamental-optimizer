@@ -45,6 +45,12 @@ problem.
 - Premature generalization is prohibited unless it removes more complexity than
   it introduces.
 
+### VI. Referential Integrity
+Framework-specific behaviors and APIs MUST be verified against official documentation.
+- When working with specialized frameworks (e.g., Streamlit, Altair), do not rely on generic assumptions or speculative design.
+- Consult current documentation to identify native solutions, theme variables, and deprecation warnings before implementing custom overrides.
+- This ensures compatibility, performance, and long-term maintainability.
+
 ## Workflow Rules
 
 - Feature specifications MUST stay focused on user-visible behavior, scope, and
@@ -93,4 +99,4 @@ Versioning policy:
 - MINOR: adds a principle or materially expands governance
 - PATCH: clarifies wording without changing intent
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-03 | **Last Amended**: 2026-05-03
+**Version**: 1.1.0 | **Ratified**: 2026-05-03 | **Last Amended**: 2026-05-10

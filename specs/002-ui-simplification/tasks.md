@@ -110,7 +110,7 @@ recoverable
 
 - [x] T016 [P] Tighten shared copy and visual labels across `src/streamlit_app.py` and `src/components/results_display.py`
 - [x] T017 Run `pytest src/components/workflow_state_test.py src/components/results_display_test.py src/engine/portfolio_engine_pandas_test.py src/engine/portfolio_math_test.py`
-- [ ] T018 Run the manual validation flow documented in `specs/002-ui-simplification/quickstart.md`
+- [x] T018 Run the manual validation flow documented in `specs/002-ui-simplification/quickstart.md`
 
 ---
 
