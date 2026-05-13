@@ -9,12 +9,20 @@ import plotly.graph_objects as go
 from dash import dcc, html, Input, Output, State, callback_context
 
 # Re-use existing engine logic
-from engine.portfolio_engine_pandas import (
-    generate_cml,
-    optimize_portfolio,
-    target_portfolio,
-)
-from engine.risk_pandas import RiskModel
+try:
+    from engine.portfolio_engine_pandas import (
+        generate_cml,
+        optimize_portfolio,
+        target_portfolio,
+    )
+    from engine.risk_pandas import RiskModel
+except ModuleNotFoundError:
+    from src.engine.portfolio_engine_pandas import (
+        generate_cml,
+        optimize_portfolio,
+        target_portfolio,
+    )
+    from src.engine.risk_pandas import RiskModel
 
 app = dash.Dash(
     __name__,
@@ -518,4 +526,4 @@ def update_final_metrics(target_vol_pct, borrow_pct, tangency, rf_pct):
     return metrics, fig_cml, fig_alloc, table_alloc
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=8050)
+    app.run(debug=True, port=8050)
