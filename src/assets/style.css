@@ -101,6 +101,19 @@ body {
     border-color: var(--warning);
 }
 
+.file-ready {
+    background: var(--panel-strong);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
+.file-note {
+    color: var(--muted);
+    line-height: 1.55;
+    margin-top: 0.35rem;
+}
+
 /* Form Controls */
 .primary-button {
     border-radius: 999px;
@@ -172,6 +185,34 @@ body {
     border-top: 1px solid var(--line);
 }
 
+.preview-table-wrap {
+    margin-top: 0.85rem;
+    overflow-x: auto;
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.preview-table th,
+.preview-table td {
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.preview-table th {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.preview-table td {
+    color: var(--muted);
+}
+
 /* Metric Cards */
 .metric-card {
     background: var(--panel-strong);
@@ -204,4 +245,49 @@ body {
 
 .upload-area:hover {
     border-color: var(--accent);
+}
+
+@media (max-width: 900px) {
+    .container {
+        padding-top: 1.5rem;
+        padding-bottom: 4rem;
+    }
+
+    .card-wrapper {
+        padding: 1.15rem;
+    }
+
+    .app-title {
+        font-size: clamp(2.2rem, 11vw, 3.2rem);
+    }
+
+    .primary-button {
+        max-width: 100%;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #171b1f;
+        --bg-accent: #232930;
+        --panel: rgba(29, 35, 41, 0.96);
+        --panel-strong: #20262d;
+        --ink: #f4efe5;
+        --muted: #c7bca9;
+        --line: rgba(244, 239, 229, 0.12);
+        --accent-soft: rgba(48, 166, 139, 0.16);
+        --warning-soft: rgba(199, 107, 63, 0.18);
+        --neutral-soft: rgba(199, 188, 169, 0.12);
+        --shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+    }
+
+    .preview-table td,
+    .file-note,
+    .app-copy,
+    .section-copy,
+    .card-copy,
+    .stage-copy,
+    .status-copy {
+        color: var(--muted);
+    }
 }
