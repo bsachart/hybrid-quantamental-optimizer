@@ -6,7 +6,7 @@ A portfolio construction engine that fixes the "rear-view mirror" bias of tradit
 
 ---
 
-## 🌐 Try It Online
+## 🌐 Interfaces
 
 **Live Web Interface**: [https://bsachart.github.io/hybrid-quantamental-optimizer/](https://bsachart.github.io/hybrid-quantamental-optimizer/)
 
@@ -16,7 +16,7 @@ Use the web interface to:
 - Visualize the Efficient Frontier and Capital Market Line
 - Explore different risk/return allocations with real-time updates
 
-*No installation required - runs entirely in your browser using Stlite (Streamlit + WebAssembly).*
+The hosted page is still the legacy Streamlit/Stlite build. The primary maintained UI is now the local Dash app below.
 
 ---
 
@@ -36,14 +36,23 @@ Traditional MPT relies on historical returns to predict the future. This is fund
 
 ## 2. Quick Start
 
-### Option A: Use the Web Interface (Recommended for exploration)
+### Option A: Run the Dash App (Recommended)
+
+```bash
+pip install -r requirements.txt
+python src/app.py
+```
+
+Then open `http://127.0.0.1:8050`.
+
+### Option B: Use the Hosted Web Interface
 
 1. Visit [https://bsachart.github.io/hybrid-quantamental-optimizer/](https://bsachart.github.io/hybrid-quantamental-optimizer/)
 2. Upload your data files (see [Data Specifications](#3-data-specifications))
 3. Configure optimization parameters
 4. View results and explore allocations
 
-### Option B: Python API (For programmatic use)
+### Option C: Python API (For programmatic use)
 
 #### Step 1: Generate Data
 
